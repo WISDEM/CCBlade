@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 """
-ccblade_sa.py
+ccblade.py
 
 Created by S. Andrew Ning on 5/11/2012
 Copyright (c) NREL. All rights reserved.
@@ -9,7 +9,6 @@ Copyright (c) NREL. All rights reserved.
 A blade element momentum method using theory detailed in [1]_.  Has the
 advantages of guaranteed convergence and at a superlinear rate, and
 continuously differentiable output.
-_sa == stand-alone version
 
 .. [1] S. Andrew Ning, "A simple solution method for the blade element momentum
 equations with guaranteed convergence", Wind Energy, 2013.
@@ -17,23 +16,14 @@ equations with guaranteed convergence", Wind Energy, 2013.
 """
 
 import numpy as np
-from math import pi, radians
+from math import pi, radians, sin, cos
 from scipy.optimize import brentq
 from scipy.interpolate import RectBivariateSpline
 from zope.interface import Interface, implements
 import warnings
 
 from airfoilprep import Airfoil
-import _bemroutines
-
-
-try:
-    from wisdem.common import cosd, DirectionVector, _akima, RPM2RS, bladePositionAzimuthCS
-except ImportError:
-    from common.csystem import DirectionVector
-    import _akima
-    from common.utilities import cosd, RPM2RS, bladePositionAzimuthCS
-
+import _bem
 
 
 
@@ -177,8 +167,9 @@ class CCAirfoil:
 class CCBlade:
 
     def __init__(self, r, chord, theta, af, Rhub, Rtip, B=3, rho=1.225, mu=1.81206e-5,
-                 precone=0.0, tilt=0.0, yaw=0.0, shearExp=0.2, hubHt=80.0, nSector=8,
-                 tiploss=True, hubloss=True, wakerotation=True, usecd=True, iterRe=1):
+                 precone=0.0, tilt=0.0, yaw=0.0, shearExp=0.2, hubHt=80.0,
+                 nSector=8, precurve=None, presweep=None, tiploss=True, hubloss=True,
+                 wakerotation=True, usecd=True, iterRe=1):
         """Constructor for aerodynamic rotor analysis
 
         Parameters
@@ -246,32 +237,30 @@ class CCBlade:
         self.B = B
         self.rho = rho
         self.mu = mu
-        self.tilt = tilt
-        self.yaw = yaw
+        self.precurve = precurve
+        self.presweep = presweep
+        self.precone = radians(precone)
+        self.tilt = radians(tilt)
+        self.yaw = radians(yaw)
         self.shearExp = shearExp
         self.hubHt = hubHt
         self.bemoptions = dict(usecd=usecd, tiploss=tiploss, hubloss=hubloss, wakerotation=wakerotation)
         self.iterRe = iterRe
 
-        # check if precurve specified
-        if isinstance(precone, float) or isinstance(precone, int):
-            self.precone = precone*np.ones_like(r)
-        else:
-            self.precone = np.array(precone)
+        # check if no precurve / presweep
+        if self.precurve is None:
+            self.precurve = np.zeros(len(r))
 
-        # find blade position in azimuthal c.s.
-        self.preconefull = np.concatenate(([self.precone[0]], self.precone, [self.precone[-1]]))
-        self.rfull = np.concatenate(([Rhub], self.r, [Rtip]))
-        blade_az = bladePositionAzimuthCS(self.rfull, self.preconefull)
-        self.z_azim_full = blade_az.z
+        if self.presweep is None:
+            self.presweep = np.zeros(len(r))
 
-        # actual rotor radius
-        self.rotorR = blade_az.z[-1]
 
-        # save intermediate positions (not root and tip)
-        self.z_azim = blade_az.z[1:-1]
-        self.x_azim = blade_az.x[1:-1]
-        self.y_azim = np.zeros_like(self.x_azim)
+        # rotor radius
+        if self.precurve[-1] != 0 and self.precone != 0.0:
+            warnings.warn('rotor diameter may be modified in unexpected ways if tip precurve and precone are both nonzero')
+
+        self.rotorR = Rtip*cos(self.precone) + self.precurve[-1]*sin(self.precone)  # assumes precurve is same at tip which may not be true
+
 
         # azimuthal discretization
         if self.tilt == 0.0 and self.yaw == 0.0 and self.shearExp == 0.0:
@@ -281,64 +270,92 @@ class CCBlade:
 
 
 
-
+    # residual
     def __runBEM(self, phi, r, chord, theta, af, Vx, Vy):
-        """private method to run the BEM method.  primarily through Fortran calls."""
+        """residual of BEM method and other corresponding variables"""
 
         a = 0.0
         ap = 0.0
         for i in range(self.iterRe):
 
-            alpha, W, Re = _bemroutines.relativewind(phi, a, ap, Vx, Vy, self.pitch,
-                                                     chord, theta, self.rho, self.mu)
-
+            alpha, W, Re = _bem.relativewind(phi, a, ap, Vx, Vy, self.pitch,
+                                             chord, theta, self.rho, self.mu)
             cl, cd = af.evaluate(alpha, Re)
 
-            fzero, a, ap = _bemroutines.inductionfactors(r, chord, self.Rhub, self.Rtip, phi,
-                                                         cl, cd, self.B, Vx, Vy, **self.bemoptions)
+            fzero, a, ap = _bem.inductionfactors(r, chord, self.Rhub, self.Rtip, phi,
+                                                 cl, cd, self.B, Vx, Vy, **self.bemoptions)
 
         return fzero, a, ap
 
 
     def __errorFunction(self, phi, r, chord, theta, af, Vx, Vy):
-        """private method.  only want to return residual for Brent's method"""
+        """strip other outputs leaving only residual for Brent's method"""
 
         fzero, a, ap = self.__runBEM(phi, r, chord, theta, af, Vx, Vy)
 
         return fzero
 
 
-    def __evaluateLoads(self, phi, a, ap):
-        """private method.  convert solution for local inflow angle and induction factors
-        to normal and tangential loads.
+    def __loads(self, phi, r, chord, theta, af, Vx, Vy):
+        """normal and tangential loads at one section"""
 
-        """
+        cphi = cos(phi)
+        sphi = sin(phi)
 
-        n = len(a)
+        zero, a, ap = self.__runBEM(phi, r, chord, theta, af, Vx, Vy)
+
+        alpha, W, Re = _bem.relativewind(phi, a, ap, Vx, Vy, self.pitch,
+                                         chord, theta, self.rho, self.mu)
+        cl, cd = af.evaluate(alpha, Re)
+
+        cn = cl*cphi + cd*sphi  # these expressions should always contain drag
+        ct = cl*sphi - cd*cphi
+
+        q = 0.5*self.rho*W**2
+        Np = cn*q*chord
+        Tp = ct*q*chord
+
+        return Np, Tp
+
+
+    def __loads_nonRotating(self, chord, theta, af, Vx, Vy):
+        """compute loads in batch for non-rotating case"""
+
+        n = len(chord)
+        W = np.zeros(n)
         cl = np.zeros(n)
         cd = np.zeros(n)
-        W = np.zeros(n)
 
         for i in range(n):
 
-            alpha, W[i], Re = _bemroutines.relativewind(phi[i], a[i], ap[i], self.Vx[i], self.Vy[i],
-                                                        self.pitch, self.chord[i], self.theta[i],
-                                                        self.rho, self.mu)
-            cl[i], cd[i] = self.af[i].evaluate(alpha, Re)
+            phi = pi/2
+            a = 0.0
+            ap = 0.0
 
-        cn = cl*np.cos(phi) + cd*np.sin(phi)  # these expressions should always contain drag
-        ct = cl*np.sin(phi) - cd*np.cos(phi)
+            alpha, W[i], Re = _bem.relativewind(phi, a, ap, Vx[i], Vy[i], self.pitch,
+                                                chord[i], theta[i], self.rho, self.mu)
+            cl[i], cd[i] = af[i].evaluate(alpha, Re)
+
+        cn = cd
+        ct = cl
 
         q = 0.5*self.rho*W**2
-        Np = cn*q*self.chord
-        Tp = ct*q*self.chord
+        Np = cn*q*chord
+        Tp = ct*q*chord
 
-        # loads must go to zero at ends
-        Np = np.concatenate(([0.0], Np, [0.0]))
-        Tp = np.concatenate(([0.0], Tp, [0.0]))
-        theta = np.concatenate(([self.theta[0]], self.theta, [self.theta[-1]]))
+        return Np, Tp
 
-        return self.rfull, Tp, Np, np.degrees(theta), self.preconefull
+
+
+
+    def __windComponents(self, Uinf, Omega, azimuth):
+        """x, y components of wind in blade-aligned coordinate system"""
+
+        Vx, Vy = _bem.windcomponents(self.r, self.precurve, self.presweep,
+            self.precone, self.yaw, self.tilt, azimuth, Uinf, Omega, self.hubHt, self.shearExp)
+
+        return Vx, Vy
+
 
 
 
@@ -377,46 +394,31 @@ class CCBlade:
         """
 
         self.pitch = radians(pitch)
+        azimuth = radians(azimuth)
 
-        # get section heights in wind-aligned coordinate system
-        heightFromHub = DirectionVector(self.x_azim, self.y_azim, self.z_azim).azimuthToHub(azimuth).hubToYaw(self.tilt).z
+        # component of velocity at each radial station
+        Vx, Vy = self.__windComponents(Uinf, Omega, azimuth)
 
-        # shear profile
-        V = Uinf*np.abs(1 + heightFromHub/self.hubHt)**self.shearExp
-
-        # compute wind and rotation velocity in azimuthal reference frame
-        Vwind = DirectionVector(V, 0*V, 0*V).windToYaw(self.yaw).yawToHub(self.tilt).hubToAzimuth(azimuth)
-        OmegaV = DirectionVector(Omega*RPM2RS, 0.0, 0.0)
-        RV = DirectionVector(self.x_azim, self.y_azim, self.z_azim)
-        Vrot = -OmegaV.cross(RV)  # negative sign because relative wind opposite to rotation
-
-        # combine and rotate to local blade frame
-        Vtotal = (Vwind + Vrot).azimuthToBlade(self.precone)
-
-        self.Vx = Vtotal.x
-        self.Vy = Vtotal.y
-
-        # initialize
-        n = len(self.r)
-        avec = np.zeros(n)
-        apvec = np.zeros(n)
-        phivec = np.zeros(n)
 
         if Omega == 0:  # non-rotating
 
-            phivec = pi/2.0 * np.ones(n)
-            avec = np.zeros(n)
-            apvec = np.zeros(n)
+            Np, Tp = self.__loads_nonRotating(self.chord, self.theta, self.af, Vx, Vy)
 
         else:
 
+            # initialize
+            n = len(self.r)
+            Np = np.zeros(n)
+            Tp = np.zeros(n)
             errf = self.__errorFunction
 
             # ---------------- loop across blade ------------------
-            for i in xrange(n):
+            for i in range(n):
+
+                # ------ BEM solution method see (Ning, doi:10.1002/we.1636) ------
 
                 # index dependent arguments
-                args = (self.r[i], self.chord[i], self.theta[i], self.af[i], self.Vx[i], self.Vy[i])
+                args = (self.r[i], self.chord[i], self.theta[i], self.af[i], Vx[i], Vy[i])
 
                 # set standard limits
                 epsilon = 1e-6
@@ -433,83 +435,19 @@ class CCBlade:
                         phi_upper = pi - epsilon
 
                 try:
-                    phi_opt = brentq(errf, phi_lower, phi_upper, args=args)
+                    phi_star = brentq(errf, phi_lower, phi_upper, args=args)
 
                 except ValueError:
 
                     warnings.warn('error.  check input values.')
-                    phi_opt = 0.0
+                    phi_star = 0.0
+
+                # ----------------------------------------------------------------
+
+                Np[i], Tp[i] = self.__loads(phi_star, *args)
 
 
-                phivec[i] = phi_opt
-                zero, avec[i], apvec[i] = self.__runBEM(phi_opt, *args)
-
-            # ----------------------------------------------
-
-        # # update distributed loads
-        # rload, Tp, Np, theta, precone = self.__evaluateLoads(phivec, avec, apvec)
-
-
-        # # get gradients
-        # delta = 1e-6
-        # zero_new = np.zeros(n)
-
-        # phivec += delta
-        # ignore, Tp_d, Np_d, ignore, ignore = self.__evaluateLoads(phivec, avec, apvec)
-        # for i in range(n):
-        #     args = (self.r[i], self.chord[i], self.theta[i], self.af[i], self.Vx[i], self.Vy[i])
-        #     zero_new[i], a, ap = self.__runBEM(phivec[i], *args)
-        # phivec -= delta
-
-        # dNpdy = (Np_d[1:-1] - Np[1:-1]) / delta
-        # dTpdy = (Tp_d[1:-1] - Tp[1:-1]) / delta
-        # drdy = (zero_new - zero) / delta
-
-        # dNpdx = np.zeros((3, n))
-        # dTpdx = np.zeros((3, n))
-        # drdx = np.zeros((3, n))
-
-        # self.r += delta
-        # ignore, Tp_d, Np_d, ignore, ignore = self.__evaluateLoads(phivec, avec, apvec)
-        # for i in range(n):
-        #     args = (self.r[i], self.chord[i], self.theta[i], self.af[i], self.Vx[i], self.Vy[i])
-        #     zero_new[i], a, ap = self.__runBEM(phivec[i], *args)
-        # self.r -= delta
-
-        # dNpdx[0, :] = (Np_d[1:-1] - Np[1:-1]) / delta
-        # dTpdx[0, :] = (Tp_d[1:-1] - Tp[1:-1]) / delta
-        # drdx[0, :] = (zero_new - zero) / delta
-
-
-        # self.chord += delta
-        # ignore, Tp_d, Np_d, ignore, ignore = self.__evaluateLoads(phivec, avec, apvec)
-        # for i in range(n):
-        #     args = (self.r[i], self.chord[i], self.theta[i], self.af[i], self.Vx[i], self.Vy[i])
-        #     zero_new[i], a, ap = self.__runBEM(phivec[i], *args)
-        # self.chord -= delta
-
-        # dNpdx[1, :] = (Np_d[1:-1] - Np[1:-1]) / delta
-        # dTpdx[1, :] = (Tp_d[1:-1] - Tp[1:-1]) / delta
-        # drdx[1, :] = (zero_new - zero) / delta
-
-        # self.theta += delta
-        # ignore, Tp_d, Np_d, ignore, ignore = self.__evaluateLoads(phivec, avec, apvec)
-        # for i in range(n):
-        #     args = (self.r[i], self.chord[i], self.theta[i], self.af[i], self.Vx[i], self.Vy[i])
-        #     zero_new[i], a, ap = self.__runBEM(phivec[i], *args)
-        # self.theta -= delta
-
-        # dNpdx[2, :] = (Np_d[1:-1] - Np[1:-1]) / delta
-        # dTpdx[2, :] = (Tp_d[1:-1] - Tp[1:-1]) / delta
-        # drdx[2, :] = (zero_new - zero) / delta
-
-        # DTpDx = dTpdx - dTpdy/drdy*drdx
-        # DNpDx = dNpdx - dNpdy/drdy*drdx
-
-        # return rload, Tp, Np, theta, precone, DTpDx, DNpDx
-
-        # update distributed loads
-        return self.__evaluateLoads(phivec, avec, apvec)
+        return Np, Tp
 
 
 
@@ -551,7 +489,7 @@ class CCBlade:
         """
 
         # rename
-        B = self.B
+        args = (self.r, self.precurve, self.precone, self.Rhub, self.Rtip)
         nsec = self.nSector
 
         # initialize
@@ -570,25 +508,16 @@ class CCBlade:
             for j in range(nsec):  # integrate across azimuth
                 azimuth = 360.0*float(j)/nsec
 
-                # run analysis
-                r, Tp, Np, theta, precone = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                # contribution from this azimuthal location
+                Np, Tp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                Tsub, Qsub = _bem.thrusttorque(Np, Tp, *args)
 
-                thrust = Np*cosd(precone)
-                torque = Tp*self.z_azim_full
-
-                # smooth out integration
-                oldr = r
-                r = np.linspace(oldr[0], oldr[-1], 200)
-                thrust = _akima.interpolate(oldr, thrust, r)
-                torque = _akima.interpolate(oldr, torque, r)
-
-                # integrate Thrust and Torque
-                T[i] += B * np.trapz(thrust, r) / nsec
-                Q[i] += B * np.trapz(torque, r) / nsec
+                T[i] += self.B * Tsub / nsec
+                Q[i] += self.B * Qsub / nsec
 
 
         # Power
-        P = Q * Omega*RPM2RS
+        P = Q * Omega*pi/30.0  # RPM to rad/s
 
         # normalize if necessary
         if coefficient:
@@ -627,7 +556,7 @@ if __name__ == '__main__':
 
     import os
     afinit = CCAirfoil.initFromAerodynFile  # just for shorthand
-    basepath = os.path.join('5MW_files', '5MW_AFFiles') + os.path.sep
+    basepath = '5MW_AFFiles' + os.path.sep
 
     # load all airfoils
     airfoil_types = [0]*8
@@ -668,13 +597,13 @@ if __name__ == '__main__':
     azimuth = 90
 
     # evaluate distributed loads
-    rload, Tp, Np, theta, precone = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+    Np, Tp = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
     # plot
     import matplotlib.pyplot as plt
-    rstar = (rload - rload[0]) / (rload[-1] - rload[0])
-    plt.plot(rstar, Tp/1e3, 'k', label='lead-lag')
-    plt.plot(rstar, Np/1e3, 'r', label='flapwise')
+    # rstar = (rload - rload[0]) / (rload[-1] - rload[0])
+    plt.plot(r, Tp/1e3, 'k', label='lead-lag')
+    plt.plot(r, Np/1e3, 'r', label='flapwise')
     plt.xlabel('blade fraction')
     plt.ylabel('distributed aerodynamic loads (kN)')
     plt.legend(loc='upper left')

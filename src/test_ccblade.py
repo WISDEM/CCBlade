@@ -3,10 +3,7 @@ import numpy as np
 from os import path
 import math
 
-try:
-    from ccblade_sa import CCAirfoil, CCBlade
-except ImportError:
-    from wisdem.rotor.ccblade_sa import CCAirfoil, CCBlade
+from ccblade import CCAirfoil, CCBlade
 
 
 class TestNREL5MW(unittest.TestCase):
@@ -102,10 +99,9 @@ class TestNREL5MW(unittest.TestCase):
         # plt.plot(Uinf, Tref/1e3)
         # plt.show()
 
-
         idx = (Uinf < 15)
         np.testing.assert_allclose(Q[idx]/1e6, Qref[idx]/1e3, atol=0.15)
-        np.testing.assert_allclose(P[idx]/1e6, Pref[idx]/1e3, atol=0.15)  # within 0.15 of 1MW
+        np.testing.assert_allclose(P[idx]/1e6, Pref[idx]/1e3, atol=0.2)  # within 0.2 of 1MW
         np.testing.assert_allclose(T[idx]/1e6, Tref[idx]/1e3, atol=0.15)
 
 
