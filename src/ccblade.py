@@ -175,8 +175,7 @@ class CCBlade:
         Parameters
         ----------
         r : array_like (m)
-            locations defining the blade along a reference axis that
-            follows the blade path (values should be increasing).
+            locations defining the blade along a z-axis of blade coordinate system (values should be increasing).
         chord : array_like (m)
             corresponding chord length at each section
         theta : array_like (deg)
@@ -194,9 +193,8 @@ class CCBlade:
             freestream fluid density
         mu : float, optional (kg/m/s)
             dynamic viscosity of fluid
-        precone : float or array_like, optional (deg)
+        precone : float, optional (deg)
             :ref:`hub precone angle <azimuth_blade_coord>`
-            can be used for precurve in addition to precone by using an array input (blade length is preserved).
         tilt : float, optional (deg)
             nacelle :ref:`tilt angle <yaw_hub_coord>`
         yaw : float, optional (deg)
@@ -209,6 +207,10 @@ class CCBlade:
         nSector : int, optional
             number of azimuthal sectors to descretize aerodynamic calculation.  automatically set to
             ``1`` if tilt, yaw, and shearExp are all 0.0.  Otherwise set to a minimum of 4.
+        precurve : array_like, optional (m)
+            location of blade pitch axis in x-direction of blade coordinate system
+        presweep : array_like, optional (m)
+            location of blade pitch axis in y-direction of blade coordinate system
         tiploss : boolean, optional
             if True, include Prandtl tip loss model
         hubloss : boolean, optional
@@ -267,7 +269,6 @@ class CCBlade:
             self.nSector = 1  # no more are necessary
         else:
             self.nSector = max(4, nSector)  # at least 4 are necessary
-
 
 
     # residual
@@ -489,7 +490,7 @@ class CCBlade:
         """
 
         # rename
-        args = (self.r, self.precurve, self.precone, self.Rhub, self.Rtip)
+        args = (self.r, self.precurve, self.presweep, self.precone, self.Rhub, self.Rtip)
         nsec = self.nSector
 
         # initialize
