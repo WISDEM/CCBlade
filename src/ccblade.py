@@ -239,8 +239,6 @@ class CCBlade:
         self.B = B
         self.rho = rho
         self.mu = mu
-        self.precurve = precurve
-        self.presweep = presweep
         self.precone = radians(precone)
         self.tilt = radians(tilt)
         self.yaw = radians(yaw)
@@ -250,18 +248,22 @@ class CCBlade:
         self.iterRe = iterRe
 
         # check if no precurve / presweep
-        if self.precurve is None:
-            self.precurve = np.zeros(len(r))
+        if precurve is None:
+            precurve = np.zeros(len(r)+1)
 
-        if self.presweep is None:
-            self.presweep = np.zeros(len(r))
+        if presweep is None:
+            presweep = np.zeros(len(r)+1)
 
+        self.precurve = precurve[:-1]
+        self.precurveTip = precurve[-1]
+        self.presweep = presweep[:-1]
+        self.presweepTip = presweep[-1]
 
         # rotor radius
-        if self.precurve[-1] != 0 and self.precone != 0.0:
+        if self.precurveTip != 0 and self.precone != 0.0:
             warnings.warn('rotor diameter may be modified in unexpected ways if tip precurve and precone are both nonzero')
 
-        self.rotorR = Rtip*cos(self.precone) + self.precurve[-1]*sin(self.precone)  # assumes precurve is same at tip which may not be true
+        self.rotorR = Rtip*cos(self.precone) + self.precurveTip*sin(self.precone)
 
 
         # azimuthal discretization
@@ -490,7 +492,8 @@ class CCBlade:
         """
 
         # rename
-        args = (self.r, self.precurve, self.presweep, self.precone, self.Rhub, self.Rtip)
+        args = (self.r, self.precurve, self.presweep, self.precone,
+            self.Rhub, self.Rtip, self.precurveTip, self.presweepTip)
         nsec = self.nSector
 
         # initialize

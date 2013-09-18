@@ -144,7 +144,7 @@ end subroutine relativeWind
 
 
 
-subroutine defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, cone)
+subroutine defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, cone, s)
 
     implicit none
 
@@ -156,7 +156,10 @@ subroutine defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, 
     real(ReKi), intent(in) :: precone
 
     ! out
-    real(ReKi), dimension(n), intent(out) :: x_az, y_az, z_az, cone
+    real(ReKi), dimension(n), intent(out) :: x_az, y_az, z_az, cone, s
+
+    ! local
+    integer :: i
 
 
     ! coordinate in azimuthal coordinate system
@@ -172,6 +175,14 @@ subroutine defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, 
     cone(2:n-1) = 0.5*(atan2(-(x_az(2:n-1) - x_az(1:n-2)), z_az(2:n-1) - z_az(1:n-2)) &
                        + atan2(-(x_az(3:n) - x_az(2:n-1)), z_az(3:n) - z_az(2:n-1)))
     cone(n) = atan2(-(x_az(n) - x_az(n-1)), z_az(n) - z_az(n-1))
+
+
+    ! total path length of blade
+    s(1) = 0.0
+    do i = 2, n
+        s(i) = s(i-1) + sqrt((precurve(i) - precurve(i-1))**2 + &
+            (presweep(i) - presweep(i-1))**2 + (r(i) - r(i-1))**2)
+    end do
 
 
 end subroutine defineCurvature
@@ -196,7 +207,7 @@ subroutine windComponents(n, r, precurve, presweep, precone, yaw, tilt, azimuth,
 
     ! local
     real(ReKi) :: sy, cy, st, ct, sa, ca, pi, Omega
-    real(ReKi), dimension(n) :: cone, sc, cc, x_az, y_az, z_az
+    real(ReKi), dimension(n) :: cone, sc, cc, x_az, y_az, z_az, sint
     real(ReKi), dimension(n) :: heightFromHub, V, Vwind_x, Vwind_y, Vrot_x, Vrot_y
 
 
@@ -211,7 +222,7 @@ subroutine windComponents(n, r, precurve, presweep, precone, yaw, tilt, azimuth,
     Omega = OmegaRPM * pi/30.0
 
 
-    call defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, cone)
+    call defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, cone, sint)
     sc = sin(cone)
     cc = cos(cone)
 
@@ -257,7 +268,8 @@ end subroutine windComponents
 
 
 
-subroutine thrustTorque(n, Np, Tp, r, precurve, presweep, precone, Rhub, Rtip, T, Q)
+subroutine thrustTorque(n, Np, Tp, r, precurve, presweep, precone, &
+    Rhub, Rtip, precurveTip, presweepTip, T, Q)
 
     implicit none
 
@@ -266,50 +278,48 @@ subroutine thrustTorque(n, Np, Tp, r, precurve, presweep, precone, Rhub, Rtip, T
     ! in
     integer, intent(in) :: n
     real(ReKi), dimension(n), intent(in) :: Np, Tp, r, precurve, presweep
-    real(ReKi), intent(in) :: precone, Rhub, Rtip
+    real(ReKi), intent(in) :: precone, Rhub, Rtip, precurveTip, presweepTip
 
     ! out
     real(ReKi), intent(out) :: T, Q
 
     ! local
     real(ReKi) :: ds
-    real(ReKi), dimension(n) :: x_az, y_az, z_az, cone
-    real(ReKi), dimension(n+2) :: rfull, curvefull, sweepfull, thrust, torque, s
+    real(ReKi), dimension(n+2) :: rfull, curvefull, sweepfull, Npfull, Tpfull
+    real(ReKi), dimension(n+2) :: thrust, torque, x_az, y_az, z_az, cone, s
     integer :: i
 
 
-    ! get z_az and total cone angle
-    call defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, cone)
-
-    ! compute sectional contribution of thrust and torque
-    rfull(2:n+1) = r
-    curvefull(2:n+1) = precurve
-    sweepfull(2:n+1) = presweep
-    thrust(2:n+1) = Np*cos(cone)
-    torque(2:n+1) = Tp*z_az
-
     ! add hub/tip for complete integration.  loads go to zero at hub/tip.
     rfull(1) = Rhub
+    rfull(2:n+1) = r
     rfull(n+2) = Rtip
+
     curvefull(1) = 0.0
-    curvefull(n+2) = precurve(n) + (Rtip - r(n))*(precurve(n) - precurve(n-1))/(r(n) - r(n-1))  ! linear extrapolation
+    curvefull(2:n+1) = precurve
+    curvefull(n+2) = precurveTip
+
     sweepfull(1) = 0
-    sweepfull(n+2) = presweep(n) + (Rtip - r(n))*(presweep(n) - presweep(n-1))/(r(n) - r(n-1))  ! linear extrapolation
-    thrust(1) = 0.0
-    thrust(n+2) = 0.0
-    torque(1) = 0.0
-    torque(n+2) = 0.0
+    sweepfull(2:n+1) = presweep
+    sweepfull(n+2) = presweepTip
+
+    Npfull(1) = 0.0
+    Npfull(2:n+1) = Np
+    Npfull(n+2) = 0.0
+
+    Tpfull(1) = 0.0
+    Tpfull(2:n+1) = Tp
+    Tpfull(n+2) = 0.0
 
 
-    ! total path length of blade
-    s(1) = 0.0
-    do i = 2, n+2
-        s(i) = s(i-1) + sqrt((curvefull(i) - curvefull(i-1))**2 + &
-            (sweepfull(i) - sweepfull(i-1))**2 + (rfull(i) - rfull(i-1))**2)
-    end do
+    ! get z_az and total cone angle
+    call defineCurvature(n+2, rfull, curvefull, sweepfull, precone, x_az, y_az, z_az, cone, s)
 
 
     ! integrate Thrust and Torque (trapezoidal)
+    thrust = Npfull*cos(cone)
+    torque = Tpfull*z_az
+
     T = 0.0
     do i = 1, n+1
         ds = s(i+1) - s(i)
