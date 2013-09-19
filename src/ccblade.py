@@ -18,7 +18,7 @@ equations with guaranteed convergence", Wind Energy, 2013.
 import numpy as np
 from math import pi, radians, sin, cos
 from scipy.optimize import brentq
-from scipy.interpolate import RectBivariateSpline
+from scipy.interpolate import RectBivariateSpline, bisplev
 from zope.interface import Interface, implements
 import warnings
 
@@ -92,12 +92,14 @@ class CCAirfoil:
         """
 
         alpha = np.radians(alpha)
+        self.one_Re = False
 
         # special case if zero or one Reynolds number (need at least two for bivariate spline)
         if len(Re) < 2:
             Re = [1e1, 1e15]
             cl = np.c_[cl, cl]
             cd = np.c_[cd, cd]
+            self.one_Re = True
 
         kx = min(len(alpha)-1, 3)
         ky = min(len(Re)-1, 3)
@@ -128,7 +130,7 @@ class CCAirfoil:
         return cls(alpha, Re, cl, cd)
 
 
-    def evaluate(self, alpha, Re):
+    def evaluate(self, alpha, Re, derivatives=False):
         """Get lift/drag coefficient at the specified angle of attack and Reynolds number.
 
         Parameters
@@ -158,6 +160,25 @@ class CCAirfoil:
         return cl, cd
 
 
+    def derivatives(self, alpha, Re):
+
+        # note: direct call to bisplev will be unnecessary with latest scipy update (add derivative method)
+        tck_cl = self.cl_spline.tck[:3] + self.cl_spline.degrees  # concatenate lists
+        tck_cd = self.cd_spline.tck[:3] + self.cd_spline.degrees
+
+        dcl_dalpha = bisplev(alpha, Re, tck_cl, dx=1, dy=0)
+        dcd_dalpha = bisplev(alpha, Re, tck_cd, dx=1, dy=0)
+
+        if self.one_Re:
+            dcl_dRe = 0.0
+            dcd_dRe = 0.0
+        else:
+            dcl_dRe = bisplev(alpha, Re, tck_cl, dx=0, dy=1)
+            dcd_dRe = bisplev(alpha, Re, tck_cd, dx=0, dy=1)
+
+        return dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe
+
+
 
 # ------------------
 #  Main Class: CCBlade
@@ -168,8 +189,8 @@ class CCBlade:
 
     def __init__(self, r, chord, theta, af, Rhub, Rtip, B=3, rho=1.225, mu=1.81206e-5,
                  precone=0.0, tilt=0.0, yaw=0.0, shearExp=0.2, hubHt=80.0,
-                 nSector=8, precurve=None, presweep=None, tiploss=True, hubloss=True,
-                 wakerotation=True, usecd=True, iterRe=1):
+                 nSector=8, precurve=None, precurveTip=0.0, presweep=None, presweepTip=0.0,
+                 tiploss=True, hubloss=True, wakerotation=True, usecd=True, iterRe=1, derivatives=False):
         """Constructor for aerodynamic rotor analysis
 
         Parameters
@@ -246,24 +267,29 @@ class CCBlade:
         self.hubHt = hubHt
         self.bemoptions = dict(usecd=usecd, tiploss=tiploss, hubloss=hubloss, wakerotation=wakerotation)
         self.iterRe = iterRe
+        self.derivatives = derivatives
 
         # check if no precurve / presweep
         if precurve is None:
-            precurve = np.zeros(len(r)+1)
+            precurve = np.zeros(len(r))
+            precurveTip = 0.0
 
         if presweep is None:
-            presweep = np.zeros(len(r)+1)
+            presweep = np.zeros(len(r))
+            presweepTip = 0.0
 
-        self.precurve = precurve[:-1]
-        self.precurveTip = precurve[-1]
-        self.presweep = presweep[:-1]
-        self.presweepTip = presweep[-1]
+        self.precurve = precurve
+        self.precurveTip = precurveTip
+        self.presweep = presweep
+        self.presweepTip = presweepTip
 
         # rotor radius
         if self.precurveTip != 0 and self.precone != 0.0:
             warnings.warn('rotor diameter may be modified in unexpected ways if tip precurve and precone are both nonzero')
 
         self.rotorR = Rtip*cos(self.precone) + self.precurveTip*sin(self.precone)
+
+
 
 
         # azimuthal discretization
@@ -299,6 +325,42 @@ class CCBlade:
         return fzero
 
 
+
+    def __residualDerivatives(self, phi, r, chord, theta, af, Vx, Vy):
+
+        if self.iterRe != 1:
+            ValueError('Analytic derivatives not supplied for case with iterRe > 1')
+
+        # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip]  (derivative order)
+
+        # alpha, Re (analytic derivaives)
+        a = 0.0
+        ap = 0.0
+        alpha, W, Re = _bem.relativewind(phi, a, ap, Vx, Vy, self.pitch,
+                                         chord, theta, self.rho, self.mu)
+
+        dalpha_dx = np.array([1.0, 0.0, -1.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        dRe_dx = np.array([0.0, Re/chord, 0.0, Re*Vx/W**2, Re*Vy/W**2, 0.0, 0.0, 0.0])
+
+        # cl, cd (spline derivatives)
+        cl, cd = af.evaluate(alpha, Re)
+        dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe = af.derivatives(alpha, Re)
+
+        # chain rule
+        dcl_dx = dcl_dalpha*dalpha_dx + dcl_dRe*dRe_dx
+        dcd_dx = dcd_dalpha*dalpha_dx + dcd_dRe*dRe_dx
+
+        # residual, a, ap (Tapenade)
+        dx_dx = np.eye(8)
+
+        fzero, a, ap, dR_dx, da_dx, dap_dx = _bem.inductionfactors_dv(r, chord, self.Rhub, self.Rtip,
+            phi, cl, cd, self.B, Vx, Vy, dx_dx[5, :], dx_dx[1, :], dx_dx[6, :], dx_dx[7, :],
+            dx_dx[0, :], dcl_dx, dcd_dx, dx_dx[3, :], dx_dx[4, :], **self.bemoptions)
+
+        return dR_dx, da_dx, dap_dx
+
+
+
     def __loads(self, phi, r, chord, theta, af, Vx, Vy):
         """normal and tangential loads at one section"""
 
@@ -318,7 +380,42 @@ class CCBlade:
         Np = cn*q*chord
         Tp = ct*q*chord
 
-        return Np, Tp
+
+        if not self.derivatives:
+            return Np, Tp, 0.0, 0.0, 0.0
+
+
+        # derivative of residual function
+        dR_dx, da_dx, dap_dx = self.__residualDerivatives(phi, r, chord, theta, af, Vx, Vy)
+
+        # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip]  (derivative order)
+        dx_dx = np.eye(8)
+        dphi_dx = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        dchord_dx = np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+        # alpha, W, Re (Tapenade)
+
+        alpha, W, Re, dalpha_dx, dW_dx, dRe_dx = _bem.relativewind_dv(phi, a, ap,
+            Vx, Vy, self.pitch, chord, theta, self.rho, self.mu,
+            dx_dx[0, :], da_dx, dap_dx, dx_dx[3, :], dx_dx[4, :],
+            dx_dx[1, :], dx_dx[2, :])
+
+        # cl, cd (spline derivatives)
+        dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe = af.derivatives(alpha, Re)
+
+        # chain rule
+        dcl_dx = dcl_dalpha*dalpha_dx + dcl_dRe*dRe_dx
+        dcd_dx = dcd_dalpha*dalpha_dx + dcd_dRe*dRe_dx
+
+        # cn, cd
+        dcn_dx = dcl_dx*cphi - cl*sphi*dphi_dx + dcd_dx*sphi + cd*cphi*dphi_dx
+        dct_dx = dcl_dx*sphi + cl*cphi*dphi_dx - dcd_dx*cphi + cd*sphi*dphi_dx
+
+        # Np, Tp
+        dNp_dx = Np*(1.0/cn*dcn_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
+        dTp_dx = Tp*(1.0/ct*dct_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
+
+        return Np, Tp, dNp_dx, dTp_dx, dR_dx
 
 
     def __loads_nonRotating(self, chord, theta, af, Vx, Vy):
@@ -357,7 +454,46 @@ class CCBlade:
         Vx, Vy = _bem.windcomponents(self.r, self.precurve, self.presweep,
             self.precone, self.yaw, self.tilt, azimuth, Uinf, Omega, self.hubHt, self.shearExp)
 
-        return Vx, Vy
+        if not self.derivatives:
+            return Vx, Vy, 0.0, 0.0, 0.0, 0.0
+
+        # y = [r, precurve, precone, tilt, hubHt]  (derivative order)
+        n = len(self.r)
+        dy_dy = np.eye(n+n+3)
+
+        Vxd, Vyd = _bem.windcomponents_dv(self.r, self.precurve, self.presweep,
+            self.precone, self.yaw, self.tilt, azimuth, Uinf, Omega, self.hubHt, self.shearExp,
+            dy_dy[:, :n], dy_dy[:, n:2*n], dy_dy[:, 2*n], dy_dy[:, 2*n+1], dy_dy[:, 2*n+2])
+
+        dVx_dr = np.diag(Vxd[:n, :])  # off-diagonal terms are known to be zero and not needed
+        dVy_dr = np.diag(Vyd[:n, :])
+
+        dVx_dcurve = Vxd[n:2*n, :]  # tri-diagonal  (note: dVx_j / dcurve_i  i==row)
+        dVy_dcurve = Vyd[n:2*n, :]  # off-diagonal are actually all zero, but leave for convenience
+
+        # dVx_dcone = Vxd[2*n, :]
+        # dVy_dcone = Vyd[2*n, :]
+
+        # dVx_dtilt = Vxd[2*n+1, :]
+        # dVy_dtilt = Vyd[2*n+1, :]
+
+        # dVx_dhubht = Vxd[2*n+2, :]
+        # dVy_dhubht = Vyd[2*n+2, :]
+
+        # w = [r, precone, tilt, hub]
+        dVx_dw = np.vstack((dVx_dr, Vxd[2*n:, :]))
+        dVy_dw = np.vstack((dVy_dr, Vyd[2*n:, :]))
+
+        # print dVx_dw[0, :]
+        # print dVx_dr
+
+        # print dVx_dw[1, :]
+        # print dVx_dcone
+        # exit()
+
+
+        # return Vx, Vy, dVx_dw, dVy_dw, dVx_dr, dVy_dr, dVx_dcurve, dVy_dcurve, dVx_dcone, dVy_dcone, dVx_dtilt, dVy_dtilt, dVx_dhubht, dVy_dhubht
+        return Vx, Vy, dVx_dw, dVy_dw, dVx_dcurve, dVy_dcurve
 
 
 
@@ -400,12 +536,14 @@ class CCBlade:
         azimuth = radians(azimuth)
 
         # component of velocity at each radial station
-        Vx, Vy = self.__windComponents(Uinf, Omega, azimuth)
+        Vx, Vy, dVx_dw, dVy_dw, dVx_dcurve, dVy_dcurve = self.__windComponents(Uinf, Omega, azimuth)
 
 
         if Omega == 0:  # non-rotating
 
             Np, Tp = self.__loads_nonRotating(self.chord, self.theta, self.af, Vx, Vy)
+
+            return Np, Tp  # TODO: derivatives here
 
         else:
 
@@ -413,6 +551,24 @@ class CCBlade:
             n = len(self.r)
             Np = np.zeros(n)
             Tp = np.zeros(n)
+            # dNp_dchord = np.zeros(n)
+            # dTp_dchord = np.zeros(n)
+            # dNp_dtheta = np.zeros(n)
+            # dTp_dtheta = np.zeros(n)
+            dNp_dVx = np.zeros(n)
+            dTp_dVx = np.zeros(n)
+            dNp_dVy = np.zeros(n)
+            dTp_dVy = np.zeros(n)
+            # dNp_dr = np.zeros(n)
+            # dTp_dr = np.zeros(n)
+            # dNp_dRhub = np.zeros(n)
+            # dTp_dRhub = np.zeros(n)
+            # dNp_dRtip = np.zeros(n)
+            # dTp_dRtip = np.zeros(n)
+
+            dNp_dz = np.zeros((5, n))
+            dTp_dz = np.zeros((5, n))
+
             errf = self.__errorFunction
 
             # ---------------- loop across blade ------------------
@@ -447,10 +603,111 @@ class CCBlade:
 
                 # ----------------------------------------------------------------
 
-                Np[i], Tp[i] = self.__loads(phi_star, *args)
+                # derivatives of residual
+
+                Np[i], Tp[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, *args)
+
+                if self.derivatives:
+                    # separate state vars from design vars
+                    # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip]  (derivative order)
+                    dNp_dy = dNp_dx[0]
+                    dNp_dx = dNp_dx[1:]
+                    dTp_dy = dTp_dx[0]
+                    dTp_dx = dTp_dx[1:]
+                    dR_dy = dR_dx[0]
+                    dR_dx = dR_dx[1:]
+
+                    # direct (or adjoint) total derivatives
+                    DNp_Dx = dNp_dx - dNp_dy/dR_dy*dR_dx
+                    DTp_Dx = dTp_dx - dTp_dy/dR_dy*dR_dx
+
+                    # parse components
+                    # z = [r, chord, theta, Rhub, Rtip]
+                    zidx = [4, 0, 1, 5, 6]
+                    dNp_dz[:, i] = DNp_Dx[zidx]
+                    dTp_dz[:, i] = DTp_Dx[zidx]
+
+                    dNp_dVx[i] = DNp_Dx[2]
+                    dTp_dVx[i] = DTp_Dx[2]
+
+                    dNp_dVy[i] = DNp_Dx[3]
+                    dTp_dVy[i] = DTp_Dx[3]
+
+                    # dNp_dchord[i] = DNp_Dx[0]
+                    # dTp_dchord[i] = DTp_Dx[0]
+
+                    # dNp_dtheta[i] = DNp_Dx[1]
+                    # dTp_dtheta[i] = DTp_Dx[1]
 
 
-        return Np, Tp
+                    # dNp_dr[i] = DNp_Dx[4]
+                    # dTp_dr[i] = DTp_Dx[4]
+
+                    # dNp_dRhub[i] = DNp_Dx[5]
+                    # dTp_dRhub[i] = DTp_Dx[5]
+
+                    # dNp_dRtip[i] = DNp_Dx[6]
+                    # dTp_dRtip[i] = DTp_Dx[6]
+
+
+            if not self.derivatives:
+                return Np, Tp
+            else:
+
+                # print dNp_dz[2, :]
+                # print dNp_dVx
+
+                # chain rule
+                dNp_dw = dNp_dVx*dVx_dw + dNp_dVy*dVy_dw
+                dTp_dw = dTp_dVx*dVx_dw + dTp_dVy*dVy_dw
+
+                dNp_dprecurve = dNp_dVx*dVx_dcurve + dNp_dVy*dVy_dcurve
+                dTp_dprecurve = dTp_dVx*dVx_dcurve + dTp_dVy*dVy_dcurve
+
+                # stack
+                # z = [r, chord, theta, Rhub, Rtip]
+                # w = [r, precone, tilt, hubHt]
+                # X = [r, chord, theta, Rhub, Rtip, precone, tilt, hubHt]
+                dNp_dz[0, :] += dNp_dw[0, :]  # add partial w.r.t. r
+                dTp_dz[0, :] += dTp_dw[0, :]
+
+                dNp_dX = np.vstack((dNp_dz, dNp_dw[1:, :]))
+                dTp_dX = np.vstack((dTp_dz, dTp_dw[1:, :]))
+
+                # add chain rule for conversion to radians
+                ridx = [2, 5, 6]
+                dNp_dX[ridx, :] *= pi/180.0
+                dTp_dX[ridx, :] *= pi/180.0
+
+
+                # print dVx_dw[0, :]
+                # print dVx_dr
+
+                # print dVx_dw[1, :]
+                # print dVx_dcone
+                # exit()
+
+                # chain rule
+                # dNp_dr = dNp_dr + dNp_dVx*dVx_dr + dNp_dVy*dVy_dr
+                # dTp_dr = dTp_dr + dTp_dVx*dVx_dr + dTp_dVy*dVy_dr
+
+
+
+                # dNp_dprecone = dNp_dVx*dVx_dcone + dNp_dVy*dVy_dcone
+                # dTp_dprecone = dTp_dVx*dVx_dcone + dTp_dVy*dVy_dcone
+
+                # dNp_dtilt = dNp_dVx*dVx_dtilt + dNp_dVy*dVy_dtilt
+                # dTp_dtilt = dTp_dVx*dVx_dtilt + dTp_dVy*dVy_dtilt
+
+                # dNp_dhubht = dNp_dVx*dVx_dhubht + dNp_dVy*dVy_dhubht
+                # dTp_dhubht = dTp_dVx*dVx_dhubht + dTp_dVy*dVy_dhubht
+
+                return Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve
+
+                # return Np, Tp, dNp_dchord, dTp_dchord, dNp_dtheta*pi/180.0, dTp_dtheta*pi/180.0, dNp_dr, dTp_dr, \
+                #     dNp_dRhub, dTp_dRhub, dNp_dRtip, dTp_dRtip, dNp_dprecurve, dTp_dprecurve, \
+                #     dNp_dprecone*pi/180.0, dTp_dprecone*pi/180.0, dNp_dtilt*pi/180.0, dTp_dtilt*pi/180.0, dNp_dhubht, dTp_dhubht
+
 
 
 
@@ -506,19 +763,37 @@ class CCBlade:
         Q = np.zeros(npts)
         P = np.zeros(npts)
 
+        dT_ds = np.zeros((npts, 7))
+        dQ_ds = np.zeros((npts, 7))
+        dT_dv = np.zeros((npts, 5, len(self.r)))
+        dQ_dv = np.zeros((npts, 5, len(self.r)))
 
         for i in range(npts):  # iterate across conditions
 
             for j in range(nsec):  # integrate across azimuth
                 azimuth = 360.0*float(j)/nsec
 
-                # contribution from this azimuthal location
-                Np, Tp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                if not self.derivatives:
+                    # contribution from this azimuthal location
+                    Np, Tp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                else:
+                    Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve = \
+                        self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+
                 Tsub, Qsub = _bem.thrusttorque(Np, Tp, *args)
 
                 T[i] += self.B * Tsub / nsec
                 Q[i] += self.B * Qsub / nsec
 
+                if self.derivatives:
+
+                    dT_ds_sub, dQ_ds_sub, dT_dv_sub, dQ_dv_sub = \
+                        self.__thrustTorqueDeriv(Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve, *args)
+
+                    dT_ds[i, :] += self.B * dT_ds_sub / nsec
+                    dQ_ds[i, :] += self.B * dQ_ds_sub / nsec
+                    dT_dv[i, :, :] += self.B * dT_dv_sub / nsec
+                    dQ_dv[i, :, :] += self.B * dQ_dv_sub / nsec
 
         # Power
         P = Q * Omega*pi/30.0  # RPM to rad/s
@@ -531,10 +806,73 @@ class CCBlade:
             T /= (q * A)
             Q /= (q * self.rotorR * A)
 
-        return P, T, Q
+        if not self.derivatives:
+            return P, T, Q
+
+        else:
+            dP_ds = dQ_ds * Omega*pi/30.0
+            dP_dv = dQ_dv * Omega*pi/30.0
+            return P, T, Q, dP_ds, dP_dv, dT_ds, dT_dv, dQ_ds, dQ_dv
 
 
 
+
+    def __thrustTorqueDeriv(self, Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve,
+            r, precurve, presweep, precone, Rhub, Rtip, precurveTip, presweepTip):
+
+        Tb = np.array([1, 0])
+        Qb = np.array([0, 1])
+        Npb, Tpb, rb, precurveb, presweepb, preconeb, Rhubb, Rtipb, precurvetipb, presweeptipb = \
+            _bem.thrusttorque_bv(Np, Tp, r, precurve, presweep, precone, Rhub, Rtip, precurveTip, presweepTip, Tb, Qb)
+
+
+        # X = [r, chord, theta, Rhub, Rtip, precone, tilt, hubHt]
+        dT_dNp = Npb[0, :]
+        dQ_dNp = Npb[1, :]
+        dT_dTp = Tpb[0, :]
+        dQ_dTp = Tpb[1, :]
+
+        # chain rule
+        dT_dX = dT_dNp*dNp_dX + dT_dTp*dTp_dX
+        dQ_dX = dQ_dNp*dNp_dX + dQ_dTp*dTp_dX
+
+        dT_dr = dT_dX[0, :] + rb[0, :]
+        dQ_dr = dQ_dX[0, :] + rb[1, :]
+        dT_dchord = dT_dX[1, :]
+        dQ_dchord = dQ_dX[1, :]
+        dT_dtheta = dT_dX[2, :]
+        dQ_dtheta = dQ_dX[2, :]
+        dT_dRhub = np.sum(dT_dX[3, :]) + Rhubb[0]
+        dQ_dRhub = np.sum(dQ_dX[3, :]) + Rhubb[1]
+        dT_dRtip = np.sum(dT_dX[4, :]) + Rtipb[0]
+        dQ_dRtip = np.sum(dQ_dX[4, :]) + Rtipb[1]
+        dT_dprecone = np.sum(dT_dX[5, :]) + preconeb[0]*pi/180.0
+        dQ_dprecone = np.sum(dQ_dX[5, :]) + preconeb[1]*pi/180.0
+        dT_dtilt = np.sum(dT_dX[6, :])
+        dQ_dtilt = np.sum(dQ_dX[6, :])
+        dT_dhubht = np.sum(dT_dX[7, :])
+        dQ_dhubht = np.sum(dQ_dX[7, :])
+        dT_dpresweep = presweepb[0, :]
+        dQ_dpresweep = presweepb[1, :]
+        dT_dprecurvetip = precurvetipb[0]
+        dQ_dprecurvetip = precurvetipb[1]
+        dT_dpresweeptip = presweeptipb[0]
+        dQ_dpresweeptip = presweeptipb[1]
+        dT_dprecurve = np.sum(dT_dNp*dNp_dprecurve + dT_dTp*dTp_dprecurve, axis=1) + precurveb[0, :]
+        dQ_dprecurve = np.sum(dT_dNp*dNp_dprecurve + dT_dTp*dTp_dprecurve, axis=1) + precurveb[1, :]
+
+
+        # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
+        dT_ds = np.array([dT_dprecone, dT_dtilt, dT_dhubht, dT_dRhub, dT_dRtip, dT_dprecurvetip, dT_dpresweeptip])
+        dQ_ds = np.array([dQ_dprecone, dQ_dtilt, dQ_dhubht, dQ_dRhub, dQ_dRtip, dQ_dprecurvetip, dQ_dpresweeptip])
+
+
+        # vectors = [r, chord, theta, precurve, presweep]
+        dT_dv = np.vstack((dT_dr, dT_dchord, dT_dtheta, dT_dprecurve, dT_dpresweep))
+        dQ_dv = np.vstack((dQ_dr, dQ_dchord, dQ_dtheta, dQ_dprecurve, dQ_dpresweep))
+
+
+        return dT_ds, dQ_ds, dT_dv, dQ_dv
 
 
 
@@ -601,32 +939,257 @@ if __name__ == '__main__':
     azimuth = 90
 
     # evaluate distributed loads
+    # Np, Tp = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+    aeroanalysis.derivatives = True
+    P, T, Q, dP_ds, dP_dv, dT_ds, dT_dv, dQ_ds, dQ_dv = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=False)
+
+    aeroanalysis.derivatives = False
+    delta = 1e-6
+    n = len(chord)
+    deriv = np.zeros(n)
+    for i in range(n):
+        r[i] += delta
+
+        aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                               precone, tilt, yaw, shearExp, hubHt, nSector)
+        P_d, T_d, Q_d = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=False)
+        r[i] -= delta
+
+        deriv[i] = (P_d - P)/delta
+
+    print deriv
+    print dP_dv[0, 0, :]
+
+
+    precone += delta
+
+    aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                           precone, tilt, yaw, shearExp, hubHt, nSector)
+    P_d, T_d, Q_d = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=False)
+    precone -= delta
+
+    deriv = (P_d - P)/delta
+
+    print deriv
+    print dP_ds[0, 0]
+
+
+    exit()
+
+    # X = [r, chord, theta, Rhub, Rtip, precone, tilt, hubHt]
+    aeroanalysis.derivatives = True
+    Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve = \
+        aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+
+    aeroanalysis.derivatives = False
     Np, Tp = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
-    # plot
-    import matplotlib.pyplot as plt
-    # rstar = (rload - rload[0]) / (rload[-1] - rload[0])
-    plt.plot(r, Tp/1e3, 'k', label='lead-lag')
-    plt.plot(r, Np/1e3, 'r', label='flapwise')
-    plt.xlabel('blade fraction')
-    plt.ylabel('distributed aerodynamic loads (kN)')
-    plt.legend(loc='upper left')
+    n = len(chord)
+    dNp_dchord_fd = np.zeros(n)
+    for i in range(n):
+        delta = 1e-6*chord[i]
+        chord[i] += delta
 
-    CP, CT, CQ = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=True)
+        aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                               precone, tilt, yaw, shearExp, hubHt, nSector)
+        chord[i] -= delta
 
-    print CP, CT, CQ
+        Npd, Tpd = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+        dNp_dchord_fd[i] = (Npd[i] - Np[i]) / delta
+
+    print dNp_dX[1, :]
+    print dNp_dchord_fd
+    print (dNp_dX[1, :] - dNp_dchord_fd)/(dNp_dX[1, :] + 1)
+    print
 
 
-    tsr = np.linspace(2, 14, 50)
-    Omega = 10.0 * np.ones_like(tsr)
-    Uinf = Omega*pi/30.0 * Rtip/tsr
-    pitch = np.zeros_like(tsr)
+    dNp_dtheta_fd = np.zeros(n)
+    for i in range(n):
+        delta = 1e-6*theta[i]
+        theta[i] += delta
 
-    CP, CT, CQ = aeroanalysis.evaluate(Uinf, Omega, pitch, coefficient=True)
+        aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                               precone, tilt, yaw, shearExp, hubHt, nSector)
+        theta[i] -= delta
 
-    plt.figure()
-    plt.plot(tsr, CP, 'k')
-    plt.xlabel('$\lambda$')
-    plt.ylabel('$c_p$')
+        Npd, Tpd = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
-    plt.show()
+        dNp_dtheta_fd[i] = (Npd[i] - Np[i]) / delta
+
+    print dNp_dX[2, :]
+    print dNp_dtheta_fd
+    print (dNp_dX[2, :] - dNp_dtheta_fd)/(dNp_dX[2, :] + 1)
+    print
+
+
+    # TODO: Tp
+    # TODO: precurve off diagonal terms
+    dNp_dr_fd = np.zeros(n)
+    for i in range(n):
+        delta = 1e-6*r[i]
+        r[i] += delta
+
+        aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                               precone, tilt, yaw, shearExp, hubHt, nSector)
+        r[i] -= delta
+
+        Npd, Tpd = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+        dNp_dr_fd[i] = (Npd[i] - Np[i]) / delta
+
+    print dNp_dX[0, :]
+    print dNp_dr_fd
+    print (dNp_dX[0, :] - dNp_dr_fd)/(dNp_dX[0, :] + 1)
+    print
+
+
+    delta = 1e-6*Rhub
+    Rhub += delta
+
+    aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                           precone, tilt, yaw, shearExp, hubHt, nSector)
+    Rhub -= delta
+
+    Npd, Tpd = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+    dNp_dRhub_fd = (Npd - Np) / delta
+
+    print dNp_dX[3, :]
+    print dNp_dRhub_fd
+    print (dNp_dX[3, :] - dNp_dRhub_fd)/(dNp_dX[3, :] + 1)
+    print
+
+
+    delta = 1e-6*Rtip
+    Rtip += delta
+
+    aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                           precone, tilt, yaw, shearExp, hubHt, nSector)
+    Rtip -= delta
+
+    Npd, Tpd = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+    dNp_dRtip_fd = (Npd - Np) / delta
+
+    print dNp_dX[4, :]
+    print dNp_dRtip_fd
+    print (dNp_dX[4, :] - dNp_dRtip_fd)/(dNp_dX[4, :] + 1)
+    print
+
+
+    delta = 1e-6*precone
+    precone += delta
+
+    aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                           precone, tilt, yaw, shearExp, hubHt, nSector)
+    precone -= delta
+
+    Npd, Tpd = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+    dNp_dprecone_fd = (Npd - Np) / delta
+
+    print dNp_dX[5, :]
+    print dNp_dprecone_fd
+    print (dNp_dX[5, :] - dNp_dprecone_fd)/(dNp_dX[5, :] + 1)
+    print
+
+
+    delta = 1e-6*tilt
+    tilt += delta
+
+    aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                           precone, tilt, yaw, shearExp, hubHt, nSector)
+    tilt -= delta
+
+    Npd, Tpd = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+    dNp_dtilt_fd = (Npd - Np) / delta
+
+    print dNp_dX[6, :]
+    print dNp_dtilt_fd
+    print (dNp_dX[6, :] - dNp_dtilt_fd)/(dNp_dX[6, :] + 1)
+    print
+
+
+    delta = 1e-6*hubHt
+    hubHt += delta
+
+    aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                           precone, tilt, yaw, shearExp, hubHt, nSector)
+    hubHt -= delta
+
+    Npd, Tpd = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+    dNp_dhubht_fd = (Npd - Np) / delta
+
+    print dNp_dX[7, :]
+    print dNp_dhubht_fd
+    print (dNp_dX[7, :] - dNp_dhubht_fd)/(dNp_dX[7, :] + 1)
+    print
+
+
+
+    # precurve
+    precurve = np.linspace(1, 10, len(r))
+    precurveTip = 10.1
+    precone = 0.0
+    aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                           precone, tilt, yaw, shearExp, hubHt, nSector,
+                           precurve=precurve, precurveTip=precurveTip)
+    Np, Tp = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+    aeroanalysis.derivatives = True
+    Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve = \
+        aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+
+    dNp_dprecurve_fd = np.zeros((n, n))
+    for i in range(n):
+        delta = 1e-6*precurve[i]
+        precurve[i] += delta
+
+        aeroanalysis = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
+                               precone, tilt, yaw, shearExp, hubHt, nSector,
+                               precurve=precurve, precurveTip=precurveTip)
+
+        Npd, Tpd = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+        precurve[i] -= delta
+
+
+        dNp_dprecurve_fd[i, :] = (Npd - Np) / delta
+
+    print dNp_dprecurve
+    print dNp_dprecurve_fd
+    print (dNp_dprecurve - dNp_dprecurve_fd)/(dNp_dprecurve + 1)
+    print
+
+
+    # # plot
+    # import matplotlib.pyplot as plt
+    # # rstar = (rload - rload[0]) / (rload[-1] - rload[0])
+    # plt.plot(r, Tp/1e3, 'k', label='lead-lag')
+    # plt.plot(r, Np/1e3, 'r', label='flapwise')
+    # plt.xlabel('blade fraction')
+    # plt.ylabel('distributed aerodynamic loads (kN)')
+    # plt.legend(loc='upper left')
+
+    # CP, CT, CQ = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=True)
+
+    # print CP, CT, CQ
+
+
+    # tsr = np.linspace(2, 14, 50)
+    # Omega = 10.0 * np.ones_like(tsr)
+    # Uinf = Omega*pi/30.0 * Rtip/tsr
+    # pitch = np.zeros_like(tsr)
+
+    # CP, CT, CQ = aeroanalysis.evaluate(Uinf, Omega, pitch, coefficient=True)
+
+    # plt.figure()
+    # plt.plot(tsr, CP, 'k')
+    # plt.xlabel('$\lambda$')
+    # plt.ylabel('$c_p$')
+
+    # plt.show()
