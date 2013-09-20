@@ -689,22 +689,24 @@ END SUBROUTINE RELATIVEWIND_DV
 !
 !  Differentiation of windcomponents in forward (tangent) mode:
 !   variations   of useful results: vx vy
-!   with respect to varying inputs: r precurve tilt hubht precone
-!   RW status of diff variables: r:in precurve:in tilt:in hubht:in
-!                vx:out vy:out precone:in
+!   with respect to varying inputs: r precurve tilt presweep hubht
+!                precone
+!   RW status of diff variables: r:in precurve:in tilt:in presweep:in
+!                hubht:in vx:out vy:out precone:in
 SUBROUTINE WINDCOMPONENTS_DV(n, r, precurve, presweep, precone, &
   yaw, tilt, azimuth, uinf, omegarpm, hubht, shearexp, &
-  rd, precurved, preconed, tiltd, hubhtd, &
+  rd, precurved, presweepd, preconed, tiltd, hubhtd, &
   vxd, vyd, nbdirs)
 
-!  Hint: nbdirsmax should be the maximum number of differentiation directions
+!  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
   INTEGER, PARAMETER :: reki=SELECTED_REAL_KIND(15, 307)
 ! in
   INTEGER, INTENT(IN) :: n
   INTEGER, intent(in) :: nbdirs
   REAL(reki), DIMENSION(n), INTENT(IN) :: r, precurve, presweep
-  REAL(reki), DIMENSION(nbdirs, n), INTENT(IN) :: rd, precurved
+  REAL(reki), DIMENSION(nbdirs, n), INTENT(IN) :: rd, precurved, &
+&  presweepd
   REAL(reki), INTENT(IN) :: precone, yaw, tilt, azimuth, uinf, omegarpm&
 &  , hubht, shearexp
   REAL(reki), DIMENSION(nbdirs), INTENT(IN) :: preconed, tiltd, &
@@ -716,7 +718,8 @@ SUBROUTINE WINDCOMPONENTS_DV(n, r, precurve, presweep, precone, &
   REAL(reki) :: sy, cy, st, ct, sa, ca, pi, omega
   REAL(reki), DIMENSION(nbdirs) :: std, ctd
   REAL(reki), DIMENSION(n) :: cone, sc, cc, x_az, y_az, z_az, sint
-  REAL(reki), DIMENSION(nbdirs, n) :: coned, scd, ccd, x_azd, z_azd
+  REAL(reki), DIMENSION(nbdirs, n) :: coned, scd, ccd, x_azd, y_azd, &
+&  z_azd
   REAL(reki), DIMENSION(n) :: heightfromhub, v, vwind_x, vwind_y, vrot_x&
 &  , vrot_y
   REAL(reki), DIMENSION(nbdirs, n) :: heightfromhubd, vd, vwind_xd, &
@@ -739,8 +742,8 @@ SUBROUTINE WINDCOMPONENTS_DV(n, r, precurve, presweep, precone, &
   pi = 3.1415926535897932
   omega = omegarpm*pi/30.0
   CALL DEFINECURVATURE_DV(n, r, rd, precurve, precurved, presweep, &
-&                    precone, preconed, x_az, x_azd, y_az, z_az, z_azd, &
-&                    cone, coned, sint, nbdirs)
+&                    presweepd, precone, preconed, x_az, x_azd, y_az, &
+&                    y_azd, z_az, z_azd, cone, coned, sint, nbdirs)
   sc = SIN(cone)
   cc = COS(cone)
 ! get section heights in wind-aligned coordinate system
@@ -755,8 +758,8 @@ SUBROUTINE WINDCOMPONENTS_DV(n, r, precurve, presweep, precone, &
     ctd(nd) = -(tiltd(nd)*SIN(tilt))
     scd(nd, :) = coned(nd, :)*COS(cone)
     ccd(nd, :) = -(coned(nd, :)*SIN(cone))
-    heightfromhubd(nd, :) = ca*z_azd(nd, :)*ct + (y_az*sa+z_az*ca)*ctd(&
-&      nd) - x_azd(nd, :)*st - x_az*std(nd)
+    heightfromhubd(nd, :) = (sa*y_azd(nd, :)+ca*z_azd(nd, :))*ct + (y_az&
+&      *sa+z_az*ca)*ctd(nd) - x_azd(nd, :)*st - x_az*std(nd)
     pwx1d(nd, :) = (heightfromhubd(nd, :)*hubht-heightfromhub*hubhtd(nd)&
 &      )/hubht**2
     WHERE (pwx1 .GT. 0.0 .OR. (pwx1 .LT. 0.0 .AND. shearexp .EQ. INT(&
@@ -772,7 +775,7 @@ SUBROUTINE WINDCOMPONENTS_DV(n, r, precurve, presweep, precone, &
 &      ca*std(nd)*sc+(cy*st*ca+sy*sa)*scd(nd, :)+cy*(ctd(nd)*cc+ct*ccd(nd&
 &      , :)))
     vwind_yd(nd, :) = vd(nd, :)*(cy*st*sa-sy*ca) + v*cy*sa*std(nd)
-    vrot_xd(nd, :) = -(omega*y_az*scd(nd, :))
+    vrot_xd(nd, :) = -(omega*(y_azd(nd, :)*sc+y_az*scd(nd, :)))
     vrot_yd(nd, :) = omega*z_azd(nd, :)
     vxd(nd, :) = vwind_xd(nd, :) + vrot_xd(nd, :)
     vyd(nd, :) = vwind_yd(nd, :) + vrot_yd(nd, :)
@@ -793,11 +796,11 @@ SUBROUTINE WINDCOMPONENTS_DV(n, r, precurve, presweep, precone, &
 END SUBROUTINE WINDCOMPONENTS_DV
 
 !  Differentiation of definecurvature in forward (tangent) mode:
-!   variations   of useful results: z_az x_az cone
-!   with respect to varying inputs: r precurve precone
+!   variations   of useful results: z_az y_az x_az cone
+!   with respect to varying inputs: r precurve presweep precone
 SUBROUTINE DEFINECURVATURE_DV(n, r, rd, precurve, precurved, presweep, &
-&  precone, preconed, x_az, x_azd, y_az, z_az, z_azd, cone, coned, s, &
-&  nbdirs)
+&  presweepd, precone, preconed, x_az, x_azd, y_az, y_azd, z_az, z_azd, &
+&  cone, coned, s, nbdirs)
 
 !  Hint: nbdirsmax should be the maximum number of differentiation directions
   IMPLICIT NONE
@@ -806,13 +809,14 @@ SUBROUTINE DEFINECURVATURE_DV(n, r, rd, precurve, precurved, presweep, &
   INTEGER, INTENT(IN) :: n
   INTEGER, intent(in) :: nbdirs
   REAL(reki), DIMENSION(n), INTENT(IN) :: r, precurve, presweep
-  REAL(reki), DIMENSION(nbdirs, n), INTENT(IN) :: rd, precurved
+  REAL(reki), DIMENSION(nbdirs, n), INTENT(IN) :: rd, precurved, &
+&  presweepd
   REAL(reki), INTENT(IN) :: precone
   REAL(reki), DIMENSION(nbdirs), INTENT(IN) :: preconed
 ! out
   REAL(reki), DIMENSION(n), INTENT(OUT) :: x_az, y_az, z_az, cone, s
-  REAL(reki), DIMENSION(nbdirs, n), INTENT(OUT) :: x_azd, z_azd, &
-&  coned
+  REAL(reki), DIMENSION(nbdirs, n), INTENT(OUT) :: x_azd, y_azd, &
+&  z_azd, coned
 ! local
   INTEGER :: i
   REAL(reki) :: arg1
@@ -852,6 +856,7 @@ SUBROUTINE DEFINECURVATURE_DV(n, r, rd, precurve, precurved, presweep, &
     z_azd(nd, :) = rd(nd, :)*COS(precone) - r*preconed(nd)*SIN(precone) &
 &      + precurved(nd, :)*SIN(precone) + precurve*preconed(nd)*COS(&
 &      precone)
+    y_azd(nd, :) = presweepd(nd, :)
     arg1d(nd) = -(x_azd(nd, 2)-x_azd(nd, 1))
     arg2d(nd) = z_azd(nd, 2) - z_azd(nd, 1)
     coned(nd, :) = 0.0
@@ -884,7 +889,6 @@ SUBROUTINE DEFINECURVATURE_DV(n, r, rd, precurve, precurved, presweep, &
     s(i) = s(i-1) + result1
   END DO
 END SUBROUTINE DEFINECURVATURE_DV
-
 
 
 
