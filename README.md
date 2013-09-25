@@ -1,6 +1,6 @@
 # CCBlade
 
-A blade element momentum method for analyzing wind turbine aerodynamic performance that is robust (guaranteed convergence), fast (superlinear convergence rate), and smooth (continuously differentiable).
+A blade element momentum method for analyzing wind turbine aerodynamic performance that is robust (guaranteed convergence), fast (superlinear convergence rate), and smooth (continuously differentiable).  Analytic gradients are also (optionally) provided for the distributed loads, thrust, torque, and power with respect to most any design variable of interest.
 
 Author: S. Andrew Ning
 
@@ -21,6 +21,7 @@ Note that the installation also includes AirfoilPrep.py.  Though not strictly ne
 To check if installation was successful, run the unit tests
 
     $ python test/test_ccblade.py
+    $ python test/test_gradients.py
 
 ## Detailed Documentation
 

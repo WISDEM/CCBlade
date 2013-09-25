@@ -733,14 +733,31 @@ class CCBlade:
         if coefficient:
             q = 0.5 * self.rho * Uinf**2
             A = pi * self.rotorR**2
-            P /= (q * A * Uinf)
-            T /= (q * A)
-            Q /= (q * self.rotorR * A)
+            CP = P / (q * A * Uinf)
+            CT = T / (q * A)
+            CQ = Q / (q * self.rotorR * A)
 
-        if not self.derivatives:
-            return P, T, Q
+            if self.derivatives:
 
-        else:
+                dR_ds = np.array([-self.Rtip*sin(self.precone)*pi/180.0 + self.precurveTip*cos(self.precone)*pi/180.0,
+                    0.0, 0.0, 0.0, cos(self.precone), sin(self.precone), 0.0])
+
+                dCT_ds = dT_ds / (q*A) - dR_ds * 2.0*CT/self.rotorR
+                dCT_dv = dT_dv / (q*A)
+
+                dCQ_ds = dQ_ds / (q*self.rotorR*A) - dR_ds * 3.0*CQ/self.rotorR
+                dCQ_dv = dQ_dv / (q*self.rotorR*A)
+
+                dCP_ds = dQ_ds * CP/Q - dR_ds * 2.0*CP/self.rotorR
+                dCP_dv = dQ_dv * CP/Q
+
+                return CP, CT, CQ, dCP_ds, dCT_ds, dCQ_ds, dCP_dv, dCT_dv, dCQ_dv
+
+            else:
+                return CP, CT, CQ
+
+
+        if self.derivatives:
             # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
             # vectors = [r, chord, theta, precurve, presweep]
 
@@ -749,6 +766,8 @@ class CCBlade:
 
             return P, T, Q, dP_ds, dT_ds, dQ_ds, dP_dv, dT_dv, dQ_dv
 
+        else:
+            return P, T, Q
 
 
 
