@@ -1,4 +1,4 @@
-.. module:: ccblade_sa
+.. module:: ccblade
 
 .. _interfaces-label:
 

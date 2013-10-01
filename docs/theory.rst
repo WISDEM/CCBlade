@@ -29,11 +29,11 @@ The new BEM methodology transforms the two-variable, fixed-point problem into an
 This approach allows the BEM equations to be reduced to a one-dimensional residual function as a function of :math:`\phi`:
 
 .. math::
-    f(\phi) = \frac{\sin\phi}{1-a(\phi)} - \frac{\cos\phi}{\lambda_r (1+a^\prime(\phi))}  = 0
+    R(\phi) = \frac{\sin\phi}{1-a(\phi)} - \frac{\cos\phi}{\lambda_r (1+a^\prime(\phi))}  = 0
 
 
 
-:num:`Figure #f-fig` shows the typical behavior of :math:`f(\phi)` over the range :math:`\phi \in (0, \pi/2]`.  Almost all solutions for wind turbines fall within this range (for the provable convergence properties to be true, solutions outside of this range must also be considered).  The referenced paper :cite:`Ning2013A-simple-soluti` demonstrates through mathematical proof that the methodology will always find a bracket to a zero of :math:`f(\phi)` without any singularities in the interior.  This proof, along with existing proofs for root-finding methods like Brent's method :cite:`Brent1971An-algorithm-wi`, implies that a solution is guaranteed.  Furthermore, not only is the solution guaranteed, but it can be found efficiently and in a continuous manner.  This behavior allows the use of gradient-based algorithms to solve rotor optimization problems much more effectively than with traditional BEM solution approaches.
+:num:`Figure #f-fig` shows the typical behavior of :math:`R(\phi)` over the range :math:`\phi \in (0, \pi/2]`.  Almost all solutions for wind turbines fall within this range (for the provable convergence properties to be true, solutions outside of this range must also be considered).  The referenced paper :cite:`Ning2013A-simple-soluti` demonstrates through mathematical proof that the methodology will always find a bracket to a zero of :math:`R(\phi)` without any singularities in the interior.  This proof, along with existing proofs for root-finding methods like Brent's method :cite:`Brent1971An-algorithm-wi`, implies that a solution is guaranteed.  Furthermore, not only is the solution guaranteed, but it can be found efficiently and in a continuous manner.  This behavior allows the use of gradient-based algorithms to solve rotor optimization problems much more effectively than with traditional BEM solution approaches.
 
 
 .. _f-fig:
@@ -42,13 +42,23 @@ This approach allows the BEM equations to be reduced to a one-dimensional residu
     :width: 5in
     :align: center
 
-    Residual function of BEM equations using new methodology.  Solution point is where :math:`f(\phi) = 0`.
+    Residual function of BEM equations using new methodology.  Solution point is where :math:`R(\phi) = 0`.
 
 
 
-Any corrections to the BEM method can be used with this methodology (e.g., finite number of blades and skewed wake) as long as the axial induction factor can be expressed as a function of :math:`\phi` (either explicitly or through a numerical solution).  CCBlade chooses to include both hub and tip losses using Prandtl's method :cite:`glauert1935airplane` and a high-induction factor correction by Buhl :cite:`Buhl2005A-new-empirical`.  Drag is included in the computation of the induction factors.  However, all of these options can be toggled on or off.  For a given wind speed, a spline is fit to the normal and tangential forces along the radial discretization of the blade before integrating for thrust and torque.  This allows for smoother variation in thrust and torque for improved gradient estimation.
+Any corrections to the BEM method can be used with this methodology (e.g., finite number of blades and skewed wake) as long as the axial induction factor can be expressed as a function of :math:`\phi` (either explicitly or through a numerical solution).  CCBlade chooses to include both hub and tip losses using Prandtl's method :cite:`glauert1935airplane` and a high-induction factor correction by Buhl :cite:`Buhl2005A-new-empirical`.  Drag is included in the computation of the induction factors.  However, all of these options can be toggled on or off.
 
+.. For a given wind speed, a spline is fit to the normal and tangential forces along the radial discretization of the blade before integrating for thrust and torque.  This allows for smoother variation in thrust and torque for improved gradient estimation.
 
+Gradients are computed using a direct/adjoint (identical for one state variable) method.  Let us define a functional (e.g., distributed load at one section), as:
+
+.. math::
+    f = N^\prime(x_i, \phi)
+
+Using the chain rule the total derivatives are given as
+
+.. math::
+    \frac{df}{dx_i} = \frac{\partial f}{\partial x_i} - \frac{\partial f}{\partial \phi} \frac{\partial R}{\partial x_i} / \frac{\partial R}{\partial \phi}
 
 
 .. only:: html

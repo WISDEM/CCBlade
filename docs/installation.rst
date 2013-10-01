@@ -20,11 +20,17 @@ To check if installation was successful run the unit tests for the NREL 5-MW mod
 
    $ python test/test_ccblade.py
 
+Additional tests for the gradients are available at:
+
+.. code-block:: bash
+
+   $ python test/test_gradients.py
+
 An "OK" signifies that all the tests passed.
 
 .. only:: latex
 
-    To access an HTML version of this documentation that contains further details and links to the source code, open docs/index.html.
+    To access an HTML version of this documentation that contains further details and links to the source code, open docs/_build/html/index.html.
 
 
 

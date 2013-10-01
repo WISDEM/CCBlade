@@ -148,6 +148,10 @@ a:hover, a:active{
     text-decoration: underline;
 }
 
+a.reference em{
+    font-style: normal;
+}
+
 div.body h1,
 div.body h2,
 div.body h3,

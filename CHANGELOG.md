@@ -1,5 +1,22 @@
 # CCBlade Changelog
 
+## 1.0 (Sep 26, 2013)
+
+Andrew Ning <andrew.ning@nrel.gov>
+
+[NEW]:
+
+- analytic gradients!
+- presweep is added, but only from a blade element perspective---there are no sweep corrections.
+- added unit tests for gradients as compared to finite differencing
+
+[CHANGE]:
+
+- redefined the way precurvature is specified so that it was not implicitly coupled with rotor hub precone
+- no longer add the 0.0 loads at root and tip
+- simplified some of the outputs
+- removed direct dependence on coordinate system methods so that it could more easily stand-alone
+
 
 ## 0.3.0 (July 24, 2013)
 

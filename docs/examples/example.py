@@ -5,7 +5,7 @@ os.chdir(basepath)
 
 # just to temporarily change PYTHONPATH without installing
 import sys
-sys.path.append(os.path.expanduser('~') + '/Dropbox/NREL/NREL_WISDEM/src/wisdem/rotor')
+sys.path.append(os.path.expanduser('~') + '/Dropbox/NREL/CCBlade/src')
 
 
 # 1 ---------
@@ -14,7 +14,7 @@ import numpy as np
 from math import pi
 import matplotlib.pyplot as plt
 
-from ccblade_sa import CCAirfoil, CCBlade
+from ccblade import CCAirfoil, CCBlade
 
 
 # geometry
@@ -89,7 +89,7 @@ Omega = Uinf*tsr/Rtip * 30.0/pi  # convert to RPM
 azimuth = 0.0
 
 # evaluate distributed loads
-r, Tp, Np, theta, precone = rotor.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+Np, Tp = rotor.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
 # 4 ----------
 
@@ -97,6 +97,12 @@ r, Tp, Np, theta, precone = rotor.distributedAeroLoads(Uinf, Omega, pitch, azimu
 
 # plot
 rstar = (r - Rhub) / (Rtip - Rhub)
+
+# append zero at root and tip
+rstar = np.concatenate([[0.0], rstar, [1.0]])
+Np = np.concatenate([[0.0], Np, [0.0]])
+Tp = np.concatenate([[0.0], Tp, [0.0]])
+
 plt.plot(rstar, Tp/1e3, label='lead-lag')
 plt.plot(rstar, Np/1e3, label='flapwise')
 plt.xlabel('blade fraction')
@@ -115,7 +121,9 @@ P, T, Q = rotor.evaluate([Uinf], [Omega], [pitch])
 
 CP, CT, CQ = rotor.evaluate([Uinf], [Omega], [pitch], coefficient=True)
 
-print CP, CT, CQ
+print 'CP =', CP
+print 'CT =', CT
+print 'CQ =', CQ
 
 # 6 ----------
 

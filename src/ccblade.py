@@ -13,6 +13,20 @@ continuously differentiable output.
 .. [1] S. Andrew Ning, "A simple solution method for the blade element momentum
 equations with guaranteed convergence", Wind Energy, 2013.
 
+
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
 """
 
 import numpy as np
@@ -130,7 +144,7 @@ class CCAirfoil:
         return cls(alpha, Re, cl, cd)
 
 
-    def evaluate(self, alpha, Re, derivatives=False):
+    def evaluate(self, alpha, Re):
         """Get lift/drag coefficient at the specified angle of attack and Reynolds number.
 
         Parameters
@@ -196,7 +210,8 @@ class CCBlade:
         Parameters
         ----------
         r : array_like (m)
-            locations defining the blade along a z-axis of blade coordinate system (values should be increasing).
+            locations defining the blade along z-axis of :ref:`blade coordinate system <azimuth_blade_coord>`
+            (values should be increasing).
         chord : array_like (m)
             corresponding chord length at each section
         theta : array_like (deg)
@@ -229,9 +244,9 @@ class CCBlade:
             number of azimuthal sectors to descretize aerodynamic calculation.  automatically set to
             ``1`` if tilt, yaw, and shearExp are all 0.0.  Otherwise set to a minimum of 4.
         precurve : array_like, optional (m)
-            location of blade pitch axis in x-direction of blade coordinate system
+            location of blade pitch axis in x-direction of :ref:`blade coordinate system <azimuth_blade_coord>`
         presweep : array_like, optional (m)
-            location of blade pitch axis in y-direction of blade coordinate system
+            location of blade pitch axis in y-direction of :ref:`blade coordinate system <azimuth_blade_coord>`
         tiploss : boolean, optional
             if True, include Prandtl tip loss model
         hubloss : boolean, optional
@@ -246,8 +261,10 @@ class CCBlade:
             not been implemented.
         iterRe : int, optional
             The number of iterations to use to converge Reynolds number.  Generally iterRe=1 is sufficient,
-            but for high accuracy in Reynolds number, iterRe=2 iterations can be used.  More than that
+            but for high accuracy in Reynolds number effects, iterRe=2 iterations can be used.  More than that
             should not be necessary.
+        derivatives : boolean, optional
+            if True, derivatives along with function values will be returned for the various methods
 
         """
 
@@ -325,6 +342,7 @@ class CCBlade:
 
 
     def __residualDerivatives(self, phi, r, chord, theta, af, Vx, Vy):
+        """derivatives of fzero, a, ap"""
 
         if self.iterRe != 1:
             ValueError('Analytic derivatives not supplied for case with iterRe > 1')
@@ -360,7 +378,7 @@ class CCBlade:
 
 
     def __loads(self, phi, r, chord, theta, af, Vx, Vy):
-        """normal and tangential loads at one section"""
+        """normal and tangential loads at one section (and optionally derivatives)"""
 
         cphi = cos(phi)
         sphi = sin(phi)
@@ -426,7 +444,7 @@ class CCBlade:
 
         for i in range(n):
 
-            phi = pi/2
+            phi = pi/2.0
             a = 0.0
             ap = 0.0
 
@@ -500,19 +518,20 @@ class CCBlade:
 
         Returns
         -------
-        r : ndarray (m)
-            radial stations along blade where force is specified (all the way from hub to tip)
-        Tp : ndarray (N/m)
-            force per unit length tangential to the section in the direction of rotation
         Np : ndarray (N/m)
             force per unit length normal to the section on downwind side
-        theta : ndarray (deg)
-            corresponding geometric :ref:`twist angle <blade_airfoil_coord>` (not including pitch)---
-            positive twists nose into the wind
-        precone : ndarray (deg)
-            corresponding :ref:`precone/precurve <azimuth_blade_coord>` angles (these later two outputs
-            are provided to facilitate coordinate transformations)
-
+        Tp : ndarray (N/m)
+            force per unit length tangential to the section in the direction of rotation
+        dNp_dx, dTp_dx : ndarray, shape=(9, n), (present if ``self.derivatives = True``)
+            derivatives of normal and tangential loads
+            ``dNp_dx[i, j] = dNp_j/dx_i`` where x = [r_j, chord_j, theta_j, Rhub, Rtip, presweep_j, precone_j, tilt, hubHt]
+            for example, ``dNp_dx[4, j] = dNp_j/dRtip``.
+            For vector quantities all off-diagonal terms are zero (i.e., dNp_j/dchord_i = 0 for  i != j)
+            and thus not included.  (``dNp_dx[0, j] = dNp_j/dr_j``)
+        dNp_dprecurve, dTp_dprecurve : ndarray, shape=(n, n), (present if ``self.derivatives = True``)
+            derivatives of normal loads w.r.t. precurve.
+            dNp_dprecurve[i, j] = dNp_i/dprecurve_j
+            all entries are returned because precurve affects the local slope of the neighboring locations (tri-diagonal matrix)
         """
 
         self.pitch = radians(pitch)
@@ -661,6 +680,24 @@ class CCBlade:
             thrust or thrust coefficient (magnitude)
         Q or CQ : ndarray (N*m)
             torque or torque coefficient (magnitude)
+        dP_ds or dCP_ds : ndarray, shape=(npts, 7)
+            derivative of power or power coefficient w.r.t. scalar quantities
+            thus dP_ds[i, 4] = dP_dRtip for input condition i
+        dT_ds or dCT_ds : ndarray, shape=(npts, 7)
+            derivative of thrust or thrust coefficient w.r.t. scalar quantities
+            thus dT_ds[i, 4] = dT_dRtip for input condition i
+        dQ_ds or dCQ_ds : ndarray, shape=(npts, 7)
+            derivative of torque or torque coefficient w.r.t. scalar quantities
+            thus dQ_ds[i, 4] = dQ_dRtip for input condition i
+        dP_dv or dCP_dv : ndarray, shape=(npts, 5, n)
+            derivative of power or power coefficient w.r.t. vector quantities
+            thus dP_dv[i, 1, j] = dP_dchord_j for input condition i
+        dT_dv or dCT_dv : ndarray, shape=(npts, 5, n)
+            derivative of thrust or thrust coefficient w.r.t. vector quantities
+            thus dT_dv[i, 1, j] = dT_dchord_j for input condition i
+        dQ_dv or dCQ_dv : ndarray, shape=(npts, 5, n)
+            derivative of torque or torque coefficient w.r.t. vector quantities
+            thus dQ_dv[i, 1, j] = dQ_dchord_j for input condition i
 
         Notes
         -----
@@ -671,8 +708,13 @@ class CCBlade:
 
         CQ = Q / (q * A * R)
 
-        note: that the rotor radius R, may not actually be Rtip in the case
-            of precone/precurve
+        The rotor radius R, may not actually be Rtip if precone and precurve are both nonzero
+        ``R = Rtip*cos(precone) + precurveTip*sin(precone)``
+
+        order of scalar quantities is: s = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
+
+        order of vector quantities is: v = [r, chord, theta, precurve, presweep]
+
 
         """
 
@@ -773,6 +815,7 @@ class CCBlade:
 
     def __thrustTorqueDeriv(self, Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve,
             r, precurve, presweep, precone, Rhub, Rtip, precurveTip, presweepTip):
+        """derivatives of thrust and torque"""
 
         Tb = np.array([1, 0])
         Qb = np.array([0, 1])

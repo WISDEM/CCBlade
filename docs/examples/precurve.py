@@ -5,14 +5,14 @@ os.chdir(basepath)
 
 # just to temporarily change PYTHONPATH without installing
 import sys
-sys.path.append(os.path.expanduser('~') + '/Dropbox/NREL/NREL_WISDEM/src/wisdem/rotor')
+sys.path.append(os.path.expanduser('~') + '/Dropbox/NREL/CCBlade/src')
 
 
 
 import numpy as np
 import matplotlib.pyplot as plt
 
-from wisdem.rotor.ccblade_sa import CCAirfoil, CCBlade
+from ccblade import CCAirfoil, CCBlade
 
 
 # geometry
@@ -68,26 +68,22 @@ for i in range(len(r)):
 
 # 1 ----------
 
-precone = np.linspace(0, -40, len(r))
+precone = 0.0
+precurve = np.linspace(0, 4.9, len(r))**2
+precurveTip = 25.0
 
 
 # create CCBlade object
 rotor = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
-                precone, tilt, yaw, shearExp, hubHt, nSector)
+                precone, tilt, yaw, shearExp, hubHt, nSector,
+                precurve=precurve, precurveTip=precurveTip)
 
 # 1 ----------
 
-from wisdem.common import bladePositionAzimuthCS, actualDiameter
-
-blade_az = bladePositionAzimuthCS(rotor.rfull, rotor.preconefull)
-
-print actualDiameter(rotor.rfull, rotor.preconefull)/2
-
-
-plt.plot(blade_az.x, blade_az.z, 'k')
-plt.plot(blade_az.x, -blade_az.z, 'k')
+plt.plot(precurve, r, 'k')
+plt.plot(precurve, -r, 'k')
 plt.axis('equal')
 plt.grid()
-plt.savefig('/Users/sning/Dropbox/NREL/NREL_WISDEM/ccblade-beta-setup/docs/images/rotorshape.pdf')
+plt.savefig('/Users/sning/Dropbox/NREL/CCBlade/docs/images/rotorshape.pdf')
 plt.show()
 
