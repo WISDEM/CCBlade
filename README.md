@@ -30,7 +30,7 @@ Open `docs/_build/html/index.html` in your browser.
 
 ## User Information
 
-If you download this software directly from GitHub without going through our website (not yet setup at the moment), we would appreciate it if you could report your user information.  This helps us understand how our software is being used, determine where to direct resources for further development, and notify users of critical updates.  For each user please send an email to [Andrew Ning](mailto:andrew.ning@nrel.gov) with the following information:
+If you download this software directly from GitHub without going through our website (not yet setup at the moment), we would appreciate it if you could report your user information.  This helps us understand how our software is being used, determine where to direct resources for further development, and notify users of critical updates.  For each user please send an email to [Andrew Ning](mailto:andrew.ning@nrel.gov?subject=CCBlade%20User) with the following information:
 
 - First and last name
 - Email address
