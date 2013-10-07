@@ -4,6 +4,10 @@ A blade element momentum method for analyzing wind turbine aerodynamic performan
 
 Author: [S. Andrew Ning](mailto:andrew.ning@nrel.gov)
 
+## User Information
+
+If you came to this page directly without going through the NWTC Information Portal, **we would appreciate if you could [report your user information](http://wind.nrel.gov/designcodes/simulators/ccblade/downloaders/CCBlade_github_redirect.html) before cloning the repository**.  We use this information in order to allocate resources for supporting our software, and to notify users of critical updates.
+
 ## Prerequisites
 
 C compiler, Fortran compiler, NumPy, SciPy
@@ -28,13 +32,3 @@ To check if installation was successful, run the unit tests
 Open `docs/_build/html/index.html` in your browser.
 
 
-## User Information
-
-If you download this software directly from GitHub without going through our website (not yet setup at the moment), we would appreciate it if you could report your user information.  This helps us understand how our software is being used, determine where to direct resources for further development, and notify users of critical updates.  For each user please send an email to [Andrew Ning](mailto:andrew.ning@nrel.gov?subject=CCBlade%20User) with the following information:
-
-- First and last name
-- Email address
-- Organization name
-- Location (Country, if U.S. then State)
-- Organization Type (Certifier, Consultant, Individual, Manufacturer, Laboratory, School)
-- Intended use (Wind Power, Marine and Hydrokinetic Energy, Other)
