@@ -783,15 +783,16 @@ class CCBlade:
 
                 dR_ds = np.array([-self.Rtip*sin(self.precone)*pi/180.0 + self.precurveTip*cos(self.precone)*pi/180.0,
                     0.0, 0.0, 0.0, cos(self.precone), sin(self.precone), 0.0])
+                dR_ds = np.dot(np.ones((npts, 1)), np.array([dR_ds]))  # same for each operating condition
 
-                dCT_ds = dT_ds / (q*A) - dR_ds * 2.0*CT/self.rotorR
-                dCT_dv = dT_dv / (q*A)
+                dCT_ds = (dT_ds.T / (q*A) - dR_ds.T * 2.0*CT/self.rotorR).T
+                dCT_dv = (dT_dv.T / (q*A)).T
 
-                dCQ_ds = dQ_ds / (q*self.rotorR*A) - dR_ds * 3.0*CQ/self.rotorR
-                dCQ_dv = dQ_dv / (q*self.rotorR*A)
+                dCQ_ds = (dQ_ds.T / (q*self.rotorR*A) - dR_ds.T * 3.0*CQ/self.rotorR).T
+                dCQ_dv = (dQ_dv.T / (q*self.rotorR*A)).T
 
-                dCP_ds = dQ_ds * CP/Q - dR_ds * 2.0*CP/self.rotorR
-                dCP_dv = dQ_dv * CP/Q
+                dCP_ds = (dQ_ds.T * CP/Q - dR_ds.T * 2.0*CP/self.rotorR).T
+                dCP_dv = (dQ_dv.T * CP/Q).T
 
                 return CP, CT, CQ, dCP_ds, dCT_ds, dCQ_ds, dCP_dv, dCT_dv, dCQ_dv
 
