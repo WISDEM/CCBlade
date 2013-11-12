@@ -1,5 +1,13 @@
 # CCBlade Changelog
 
+## 1.0.1 (Nov 8, 2013)
+
+Andrew Ning <andrew.ning@nrel.gov>
+
+[FIX]:
+
+- derivatives of force coeffcients (CP, CT, CQ) were not handled correctly if array inputs were used
+
 ## 1.0 (Sep 26, 2013)
 
 Andrew Ning <andrew.ning@nrel.gov>
