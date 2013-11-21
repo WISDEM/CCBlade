@@ -804,8 +804,8 @@ class CCBlade:
             # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
             # vectors = [r, chord, theta, precurve, presweep]
 
-            dP_ds = dQ_ds * Omega*pi/30.0
-            dP_dv = dQ_dv * Omega*pi/30.0
+            dP_ds = (dQ_ds.T * Omega*pi/30.0).T
+            dP_dv = (dQ_dv.T * Omega*pi/30.0).T
 
             return P, T, Q, dP_ds, dT_ds, dQ_ds, dP_dv, dT_dv, dQ_dv
 
