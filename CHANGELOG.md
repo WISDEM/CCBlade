@@ -1,5 +1,14 @@
 # CCBlade Changelog
 
+## 1.0.2 (Nov 21, 2013)
+
+Andrew Ning <andrew.ning@nrel.gov>
+
+[FIX]:
+
+- same fix as below, but for the dimensional versions (P, T, Q)
+
+
 ## 1.0.1 (Nov 8, 2013)
 
 Andrew Ning <andrew.ning@nrel.gov>
