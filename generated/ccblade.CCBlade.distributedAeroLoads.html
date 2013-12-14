@@ -1,0 +1,149 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ccblade.CCBlade.distributedAeroLoads &mdash; CCBlade 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/nrel.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CCBlade 1.0.0 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="ccblade-ccblade-distributedaeroloads">
+<h1>ccblade.CCBlade.distributedAeroLoads<a class="headerlink" href="#ccblade-ccblade-distributedaeroloads" title="Permalink to this headline">¶</a></h1>
+<dl class="method">
+<dt id="ccblade.CCBlade.distributedAeroLoads">
+<tt class="descclassname">CCBlade.</tt><tt class="descname">distributedAeroLoads</tt><big>(</big><em>Uinf</em>, <em>Omega</em>, <em>pitch</em>, <em>azimuth</em><big>)</big><a class="reference internal" href="../_modules/ccblade.html#CCBlade.distributedAeroLoads"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccblade.CCBlade.distributedAeroLoads" title="Permalink to this definition">¶</a></dt>
+<dd><p>Compute distributed aerodynamic loads along blade.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Uinf</strong> : float or array_like (m/s)</p>
+<blockquote>
+<div><p>hub height wind speed (float).  If desired, an array can be input which specifies
+the velocity at each radial location along the blade (useful for analyzing loads
+behind tower shadow for example).  In either case shear corrections will be applied.</p>
+</div></blockquote>
+<p><strong>Omega</strong> : float (RPM)</p>
+<blockquote>
+<div><p>rotor rotation speed</p>
+</div></blockquote>
+<p><strong>pitch</strong> : float (deg)</p>
+<blockquote>
+<div><p>blade pitch in same direction as <a class="reference internal" href="../csystem.html#blade-airfoil-coord"><em>twist</em></a>
+(positive decreases angle of attack)</p>
+</div></blockquote>
+<p><strong>azimuth</strong> : float (deg)</p>
+<blockquote>
+<div><p>the <a class="reference internal" href="../csystem.html#hub-azimuth-coord"><em>azimuth angle</em></a> where aerodynamic loads should be computed at</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>Np</strong> : ndarray (N/m)</p>
+<blockquote>
+<div><p>force per unit length normal to the section on downwind side</p>
+</div></blockquote>
+<p><strong>Tp</strong> : ndarray (N/m)</p>
+<blockquote>
+<div><p>force per unit length tangential to the section in the direction of rotation</p>
+</div></blockquote>
+<p><strong>dNp_dx, dTp_dx</strong> : ndarray, shape=(9, n), (present if <tt class="docutils literal"><span class="pre">self.derivatives</span> <span class="pre">=</span> <span class="pre">True</span></tt>)</p>
+<blockquote>
+<div><p>derivatives of normal and tangential loads
+<tt class="docutils literal"><span class="pre">dNp_dx[i,</span> <span class="pre">j]</span> <span class="pre">=</span> <span class="pre">dNp_j/dx_i</span></tt> where x = [r_j, chord_j, theta_j, Rhub, Rtip, presweep_j, precone_j, tilt, hubHt]
+for example, <tt class="docutils literal"><span class="pre">dNp_dx[4,</span> <span class="pre">j]</span> <span class="pre">=</span> <span class="pre">dNp_j/dRtip</span></tt>.
+For vector quantities all off-diagonal terms are zero (i.e., dNp_j/dchord_i = 0 for  i != j)
+and thus not included.  (<tt class="docutils literal"><span class="pre">dNp_dx[0,</span> <span class="pre">j]</span> <span class="pre">=</span> <span class="pre">dNp_j/dr_j</span></tt>)</p>
+</div></blockquote>
+<p><strong>dNp_dprecurve, dTp_dprecurve</strong> : ndarray, shape=(n, n), (present if <tt class="docutils literal"><span class="pre">self.derivatives</span> <span class="pre">=</span> <span class="pre">True</span></tt>)</p>
+<blockquote class="last">
+<div><p>derivatives of normal loads w.r.t. precurve.
+dNp_dprecurve[i, j] = dNp_i/dprecurve_j
+all entries are returned because precurve affects the local slope of the neighboring locations (tri-diagonal matrix)</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/generated/ccblade.CCBlade.distributedAeroLoads.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, NREL.
+      Last updated on Oct 01, 2013.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

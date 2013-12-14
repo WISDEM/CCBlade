@@ -1,0 +1,6 @@
+ccblade.CCBlade.distributedAeroLoads
+====================================
+
+.. currentmodule:: ccblade
+
+.. automethod:: CCBlade.distributedAeroLoads

@@ -1,0 +1,166 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>5. Theory &mdash; CCBlade 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/nrel.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CCBlade 1.0.0 documentation" href="index.html" />
+    <link rel="next" title="Coordinate System" href="csystem.html" />
+    <link rel="prev" title="4. Module Documentation" href="documentation.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="csystem.html" title="Coordinate System"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="documentation.html" title="4. Module Documentation"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="theory">
+<span id="id1"></span><h1>5. Theory<a class="headerlink" href="#theory" title="Permalink to this headline">¶</a></h1>
+<div class="admonition note">
+<p class="first admonition-title">Note</p>
+<p class="last">Only an overview of the theory is included here; details can be found in Ning <a class="reference internal" href="#ning2013a-simple-soluti" id="id2">[4]</a>.</p>
+</div>
+<p>The rotor aerodynamic analysis is based on blade element momentum (BEM) theory.  Using BEM theory in a gradient-based rotor optimization problem can be challenging because of occasional convergence difficulties of the BEM equations.  The standard approach to solving the BEM equations is to arrange the equations as functions of the axial and tangential induction factors and solve the fixed-point problem:</p>
+<div class="math">
+\[(a, a^\prime) = f_{fp}(a, a^\prime)\]</div>
+<p>using either fixed-point iteration, Newton&#8217;s method, or a related fixed-point algorithm.  An alternative approach is to use nonlinear optimization to minimize the sum of the squares of the residuals of the induction factors (or normal and tangential loads).  Although these approaches are generally successful, they suffer from instabilities and failure to converge in some regions of the design space.  Thus, they require increased complexity and/or heuristics (but may still not converge).</p>
+<p>The new BEM methodology transforms the two-variable, fixed-point problem into an equivalent one-dimensional root-finding problem.  This is enormously beneficial as methods exist for one-dimensional root-finding problems that are guaranteed to converge as long as an appropriate bracket can be found.  The key insight to this reduction is to use the local inflow angle <span class="math">\(\phi\)</span> and the magnitude of the inflow velocity <span class="math">\(W\)</span> as the two unknowns in specifying the inflow conditions, rather than the traditional axial and tangential induction factors (see <a class="pageref" href="#inflow-fig">Figure  1</a>).</p>
+<div class="figure align-center" id="inflow-fig">
+<a class="reference internal image-reference" href="_images/inflow.png"><img alt="_images/inflow.png" src="_images/inflow.png" style="width: 5in;" /></a>
+<p class="caption">Figure 1: Parameters specifying inflow conditions of a rotating blade section.</p>
+</div>
+<p>This approach allows the BEM equations to be reduced to a one-dimensional residual function as a function of <span class="math">\(\phi\)</span>:</p>
+<div class="math">
+\[R(\phi) = \frac{\sin\phi}{1-a(\phi)} - \frac{\cos\phi}{\lambda_r (1+a^\prime(\phi))}  = 0\]</div>
+<p><a class="pageref" href="#f-fig">Figure  2</a> shows the typical behavior of <span class="math">\(R(\phi)\)</span> over the range <span class="math">\(\phi \in (0, \pi/2]\)</span>.  Almost all solutions for wind turbines fall within this range (for the provable convergence properties to be true, solutions outside of this range must also be considered).  The referenced paper <a class="reference internal" href="#ning2013a-simple-soluti" id="id3">[4]</a> demonstrates through mathematical proof that the methodology will always find a bracket to a zero of <span class="math">\(R(\phi)\)</span> without any singularities in the interior.  This proof, along with existing proofs for root-finding methods like Brent&#8217;s method <a class="reference internal" href="#brent1971an-algorithm-wi" id="id4">[1]</a>, implies that a solution is guaranteed.  Furthermore, not only is the solution guaranteed, but it can be found efficiently and in a continuous manner.  This behavior allows the use of gradient-based algorithms to solve rotor optimization problems much more effectively than with traditional BEM solution approaches.</p>
+<div class="figure align-center" id="f-fig">
+<a class="reference internal image-reference" href="_images/f.png"><img alt="_images/f.png" src="_images/f.png" style="width: 5in;" /></a>
+<p class="caption">Figure 2: Residual function of BEM equations using new methodology.  Solution point is where <span class="math">\(R(\phi) = 0\)</span>.</p>
+</div>
+<p>Any corrections to the BEM method can be used with this methodology (e.g., finite number of blades and skewed wake) as long as the axial induction factor can be expressed as a function of <span class="math">\(\phi\)</span> (either explicitly or through a numerical solution).  CCBlade chooses to include both hub and tip losses using Prandtl&#8217;s method <a class="reference internal" href="#glauert1935airplane" id="id5">[2]</a> and a high-induction factor correction by Buhl <a class="reference internal" href="#buhl2005a-new-empirical" id="id6">[3]</a>.  Drag is included in the computation of the induction factors.  However, all of these options can be toggled on or off.</p>
+<p>Gradients are computed using a direct/adjoint (identical for one state variable) method.  Let us define a functional (e.g., distributed load at one section), as:</p>
+<div class="math">
+\[f = N^\prime(x_i, \phi)\]</div>
+<p>Using the chain rule the total derivatives are given as</p>
+<div class="math">
+\[\frac{df}{dx_i} = \frac{\partial f}{\partial x_i} - \frac{\partial f}{\partial \phi} \frac{\partial R}{\partial x_i} / \frac{\partial R}{\partial \phi}\]</div>
+<p><span class="bib">Bibliography</span></p>
+<p id="bibtex-bibliography-theory-0"><table class="docutils citation" frame="void" id="brent1971an-algorithm-wi" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id4">[1]</a></td><td><span class="first last"><span><span><span><span><span><span>Richard</span><span>&nbsp;</span><span>P.</span></span><span> </span></span><span>Brent</span></span><span>.</span></span><span> </span><span><span>An algorithm with guaranteed convergence for finding a zero of a function</span><span>.</span></span></span><span> </span><span><span><em><span>The Computer Journal</span></em><span>, </span><span><span><span>14</span><span><span>(</span><span>4</span><span>)</span></span><span>:</span></span><span>422–425</span></span></span><span>, </span><span>1971</span><span>.</span></span></span></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="glauert1935airplane" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id5">[2]</a></td><td><span class="first last"><span><span><span><span><span>H.</span><span>&nbsp;</span></span><span>Glauert</span></span><span>.</span></span><span> </span><span><em><span>Airplane Propellers</span></em><span>.</span></span><span> </span><span><span><span>volume</span><span> </span><span>4</span></span><span>.</span></span></span><span> </span><span><span>Springer Verlag</span><span>, </span><span>1935</span><span>.</span></span></span></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="buhl2005a-new-empirical" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label"><a class="fn-backref" href="#id6">[3]</a></td><td><span class="first last"><span><span><span><span><span><span>M.</span><span>&nbsp;</span><span>L.</span></span><span> </span></span><span>Buhl</span></span><span>.</span></span><span> </span><span><span>A new empirical relationship between thrust coefficient and induction factor for the turbulent windmill state</span><span>.</span></span></span><span> </span><span><span><span>NREL/TP-500-36834</span><span>, </span><span>National Renewable Energy Laboratory</span><span>, </span><span>Golden, CO</span></span><span>, </span><span><span>August</span><span> </span><span>2005</span></span><span>.</span></span></span></td></tr>
+</tbody>
+</table>
+<table class="docutils citation" frame="void" id="ning2013a-simple-soluti" rules="none">
+<colgroup><col class="label" /><col /></colgroup>
+<tbody valign="top">
+<tr><td class="label">[4]</td><td><em>(<a class="fn-backref" href="#id2">1</a>, <a class="fn-backref" href="#id3">2</a>)</em> <span class="last"><span><span><span><span><span><span>S.</span><span>&nbsp;</span><span>Andrew</span></span><span> </span></span><span>Ning</span></span><span>.</span></span><span> </span><span><span>A simple solution method for the blade element momentum equations with guaranteed convergence</span><span>.</span></span><span> </span><span><em><span>Wind Energy</span></em><span>, </span><span><span>June</span><span> </span><span>2013</span></span><span>.</span></span></span><span> </span><span><span>doi:10.1002/we.1636</span><span>.</span></span></span></td></tr>
+</tbody>
+</table>
+</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="documentation.html"
+                        title="previous chapter">4. Module Documentation</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="csystem.html"
+                        title="next chapter">Coordinate System</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/theory.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="csystem.html" title="Coordinate System"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="documentation.html" title="4. Module Documentation"
+             >previous</a> |</li>
+        <li><a href="index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, NREL.
+      Last updated on Oct 01, 2013.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

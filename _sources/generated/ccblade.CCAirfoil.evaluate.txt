@@ -1,0 +1,6 @@
+ccblade.CCAirfoil.evaluate
+==========================
+
+.. currentmodule:: ccblade
+
+.. automethod:: CCAirfoil.evaluate

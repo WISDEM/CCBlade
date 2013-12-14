@@ -1,0 +1,174 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>ccblade.CCBlade.evaluate &mdash; CCBlade 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="../_static/nrel.css" type="text/css" />
+    <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="../_static/jquery.js"></script>
+    <script type="text/javascript" src="../_static/underscore.js"></script>
+    <script type="text/javascript" src="../_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CCBlade 1.0.0 documentation" href="../index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li><a href="../index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="ccblade-ccblade-evaluate">
+<h1>ccblade.CCBlade.evaluate<a class="headerlink" href="#ccblade-ccblade-evaluate" title="Permalink to this headline">¶</a></h1>
+<dl class="method">
+<dt id="ccblade.CCBlade.evaluate">
+<tt class="descclassname">CCBlade.</tt><tt class="descname">evaluate</tt><big>(</big><em>Uinf</em>, <em>Omega</em>, <em>pitch</em>, <em>coefficient=False</em><big>)</big><a class="reference internal" href="../_modules/ccblade.html#CCBlade.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccblade.CCBlade.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the aerodynamic analysis at the specified conditions.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Uinf</strong> : array_like (m/s)</p>
+<blockquote>
+<div><p>hub height wind speed</p>
+</div></blockquote>
+<p><strong>Omega</strong> : array_like (RPM)</p>
+<blockquote>
+<div><p>rotor rotation speed</p>
+</div></blockquote>
+<p><strong>pitch</strong> : array_like (deg)</p>
+<blockquote>
+<div><p>blade pitch setting</p>
+</div></blockquote>
+<p><strong>coefficient</strong> : bool, optional</p>
+<blockquote>
+<div><p>if True, results are returned in nondimensional form</p>
+</div></blockquote>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>P or CP</strong> : ndarray (W)</p>
+<blockquote>
+<div><p>power or power coefficient</p>
+</div></blockquote>
+<p><strong>T or CT</strong> : ndarray (N)</p>
+<blockquote>
+<div><p>thrust or thrust coefficient (magnitude)</p>
+</div></blockquote>
+<p><strong>Q or CQ</strong> : ndarray (N*m)</p>
+<blockquote>
+<div><p>torque or torque coefficient (magnitude)</p>
+</div></blockquote>
+<p><strong>dP_ds or dCP_ds</strong> : ndarray, shape=(npts, 7)</p>
+<blockquote>
+<div><p>derivative of power or power coefficient w.r.t. scalar quantities
+thus dP_ds[i, 4] = dP_dRtip for input condition i</p>
+</div></blockquote>
+<p><strong>dT_ds or dCT_ds</strong> : ndarray, shape=(npts, 7)</p>
+<blockquote>
+<div><p>derivative of thrust or thrust coefficient w.r.t. scalar quantities
+thus dT_ds[i, 4] = dT_dRtip for input condition i</p>
+</div></blockquote>
+<p><strong>dQ_ds or dCQ_ds</strong> : ndarray, shape=(npts, 7)</p>
+<blockquote>
+<div><p>derivative of torque or torque coefficient w.r.t. scalar quantities
+thus dQ_ds[i, 4] = dQ_dRtip for input condition i</p>
+</div></blockquote>
+<p><strong>dP_dv or dCP_dv</strong> : ndarray, shape=(npts, 5, n)</p>
+<blockquote>
+<div><p>derivative of power or power coefficient w.r.t. vector quantities
+thus dP_dv[i, 1, j] = dP_dchord_j for input condition i</p>
+</div></blockquote>
+<p><strong>dT_dv or dCT_dv</strong> : ndarray, shape=(npts, 5, n)</p>
+<blockquote>
+<div><p>derivative of thrust or thrust coefficient w.r.t. vector quantities
+thus dT_dv[i, 1, j] = dT_dchord_j for input condition i</p>
+</div></blockquote>
+<p><strong>dQ_dv or dCQ_dv</strong> : ndarray, shape=(npts, 5, n)</p>
+<blockquote class="last">
+<div><p>derivative of torque or torque coefficient w.r.t. vector quantities
+thus dQ_dv[i, 1, j] = dQ_dchord_j for input condition i</p>
+</div></blockquote>
+</td>
+</tr>
+</tbody>
+</table>
+<p class="rubric">Notes</p>
+<p>CP = P / (q * Uinf * A)</p>
+<p>CT = T / (q * A)</p>
+<p>CQ = Q / (q * A * R)</p>
+<p>The rotor radius R, may not actually be Rtip if precone and precurve are both nonzero
+<tt class="docutils literal"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">Rtip*cos(precone)</span> <span class="pre">+</span> <span class="pre">precurveTip*sin(precone)</span></tt></p>
+<p>order of scalar quantities is: s = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]</p>
+<p>order of vector quantities is: v = [r, chord, theta, precurve, presweep]</p>
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="../_sources/generated/ccblade.CCBlade.evaluate.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="../search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../genindex.html" title="General Index"
+             >index</a></li>
+        <li><a href="../index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, NREL.
+      Last updated on Oct 01, 2013.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

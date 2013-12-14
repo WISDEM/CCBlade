@@ -1,0 +1,115 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>1. Introduction &mdash; CCBlade 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/nrel.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="CCBlade 1.0.0 documentation" href="index.html" />
+    <link rel="next" title="2. Installation" href="installation.html" />
+    <link rel="prev" title="CCBlade" href="index.html" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="installation.html" title="2. Installation"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="CCBlade"
+             accesskey="P">previous</a> |</li>
+        <li><a href="index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <div class="section" id="introduction">
+<h1>1. Introduction<a class="headerlink" href="#introduction" title="Permalink to this headline">¶</a></h1>
+<p>CCBlade predicts aerodynamic loading of wind turbine blades using blade element momentum (BEM) theory.  CC stands for continuity and convergence.  CCBlade was developed primarily for use in gradient-based optimization applications where <span class="math">\(C^1\)</span> continuity and robust convergence are essential.</p>
+<p>Typical BEM implementations use iterative solution methods to converge the induction factors (e.g., fixed-point iteration or Newton&#8217;s method).  Some more complex implementations use numerical optimization to minimize the error in the induction factors.  These methods can be fairly robust, but all have at least some regions where the algorithm fails to converge.  A new methodology was developed that is provably convergent in every instance (see <a class="reference internal" href="theory.html#theory"><em>Theory</em></a>).  This robustness is particularly important for gradient-based optimization.  To ensure <span class="math">\(C^1\)</span> continuity, lift and drag coefficients are computed using a bivariate cubic spline across angle of attack and Reynolds number.  Additionally, analytic gradients for distributed loads, thrust, torque, and power are (optionally) provided.</p>
+<p>CCBlade is written in Python, but iteration-heavy sections are written in Fortran in order to improve performance.  The Fortran code is called from Python as an extension module using <a class="reference external" href="http://www.scipy.org/F2py/">f2py</a>.  The module AirfoilPrep.py is also included with the source.  Although not directly used by CCBlade, the airfoil preprocessing capabilities are often useful for this application.</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="index.html"
+                        title="previous chapter">CCBlade</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="installation.html"
+                        title="next chapter">2. Installation</a></p>
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/intro.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="installation.html" title="2. Installation"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="index.html" title="CCBlade"
+             >previous</a> |</li>
+        <li><a href="index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2013, NREL.
+      Last updated on Oct 01, 2013.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    </div>
+  </body>
+</html>

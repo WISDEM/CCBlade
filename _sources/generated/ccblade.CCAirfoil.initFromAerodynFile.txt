@@ -1,0 +1,6 @@
+ccblade.CCAirfoil.initFromAerodynFile
+=====================================
+
+.. currentmodule:: ccblade
+
+.. automethod:: CCAirfoil.initFromAerodynFile
