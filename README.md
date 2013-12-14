@@ -29,6 +29,6 @@ To check if installation was successful, run the unit tests
 
 ## Detailed Documentation
 
-Open `docs/_build/html/index.html` in your browser.
+Open a local copy of the documentation at `docs/_build/html/index.html`.  Or access the online version at <http://nrel-wisdem.github.io/CCBlade>
 
 
