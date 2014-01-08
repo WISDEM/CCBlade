@@ -969,6 +969,80 @@ class TestGradients(unittest.TestCase):
 
 
 
+    def test_dpitch1(self):
+
+        dNp_dpitch = self.dNp_dX[13, :]
+        dTp_dpitch = self.dTp_dX[13, :]
+
+        pitch = float(self.pitch)
+        delta = 1e-6
+        pitch += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        Npd, Tpd = rotor.distributedAeroLoads(self.Uinf, self.Omega, pitch, self.azimuth)
+
+        dNp_dpitch_fd = (Npd - self.Np) / delta
+        dTp_dpitch_fd = (Tpd - self.Tp) / delta
+
+        np.testing.assert_allclose(dNp_dpitch_fd, dNp_dpitch, rtol=5e-5, atol=1e-6)
+        np.testing.assert_allclose(dTp_dpitch_fd, dTp_dpitch, rtol=5e-5, atol=1e-6)
+
+
+    def test_dpitch2(self):
+
+        dT_dpitch = self.dT_ds[0, 10]
+        dQ_dpitch = self.dQ_ds[0, 10]
+        dP_dpitch = self.dP_ds[0, 10]
+
+        pitch = float(self.pitch)
+        delta = 1e-6
+        pitch += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        Pd, Td, Qd = rotor.evaluate([self.Uinf], [self.Omega], [pitch], coefficient=False)
+
+        dT_dpitch_fd = (Td - self.T) / delta
+        dQ_dpitch_fd = (Qd - self.Q) / delta
+        dP_dpitch_fd = (Pd - self.P) / delta
+
+        np.testing.assert_allclose(dT_dpitch_fd, dT_dpitch, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(dQ_dpitch_fd, dQ_dpitch, rtol=5e-5, atol=1e-8)
+        np.testing.assert_allclose(dP_dpitch_fd, dP_dpitch, rtol=5e-5, atol=1e-8)
+
+
+
+    def test_dpitch3(self):
+
+        dCT_dpitch = self.dCT_ds[0, 10]
+        dCQ_dpitch = self.dCQ_ds[0, 10]
+        dCP_dpitch = self.dCP_ds[0, 10]
+
+        pitch = float(self.pitch)
+        delta = 1e-6
+        pitch += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        CPd, CTd, CQd = rotor.evaluate([self.Uinf], [self.Omega], [pitch], coefficient=True)
+
+        dCT_dpitch_fd = (CTd - self.CT) / delta
+        dCQ_dpitch_fd = (CQd - self.CQ) / delta
+        dCP_dpitch_fd = (CPd - self.CP) / delta
+
+        np.testing.assert_allclose(dCT_dpitch_fd, dCT_dpitch, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(dCQ_dpitch_fd, dCQ_dpitch, rtol=5e-5, atol=1e-8)
+        np.testing.assert_allclose(dCP_dpitch_fd, dCP_dpitch, rtol=5e-5, atol=1e-8)
+
+
+
     def test_dprecurve1(self):
 
         precurve = np.linspace(1, 10, self.n)
@@ -1404,8 +1478,8 @@ if __name__ == '__main__':
     # from unittest import TestSuite
 
     # blah = TestSuite()
-    # blah.addTest(TestGradients('test_dOmega1'))
-    # blah.addTest(TestGradients('test_dOmega2'))
-    # blah.addTest(TestGradients('test_dOmega3'))
+    # blah.addTest(TestGradients('test_dpitch1'))
+    # blah.addTest(TestGradients('test_dpitch2'))
+    # blah.addTest(TestGradients('test_dpitch3'))
 
     # unittest.TextTestRunner().run(blah)
