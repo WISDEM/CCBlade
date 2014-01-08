@@ -125,7 +125,7 @@ The shape of the blade is seen in :num:`Figure #shape-fig`.  Note that the radiu
 Gradients
 ^^^^^^^^^
 
-CCBlade optinally provides analytic gradients of every output with respect to all design variables.  This is accomplished using a direct method (adjoint is identical because there is only one state variable at each blade section).  Partial derivatives are provided by `Tapenade <http://www-tapenade.inria.fr:8080/tapenade/index.jsp>`_ and hand calculations.  Starting with the previous example for the NREL 5-MW reference model we add the keyword value ``derivatives=True`` in the constructor.
+CCBlade optinally provides analytic gradients of every output with respect to all design variables.  This is accomplished using an adjoint method (direct method is identical because there is only one state variable at each blade section).  Partial derivatives are provided by `Tapenade <http://www-tapenade.inria.fr:8080/tapenade/index.jsp>`_ and hand calculations.  Starting with the previous example for the NREL 5-MW reference model we add the keyword value ``derivatives=True`` in the constructor.
 
 .. literalinclude:: examples/gradients.py
     :start-after: # 3 ---
@@ -147,7 +147,7 @@ We can compare against finite differencing as follows (with a randomly chosen st
 
 The output is:
 
->>> (analytic) dNp_i/dr_i = 107.680395266
+>>> (analytic) dNp_i/dr_i = 107.680395098
 >>> (fin diff) dNp_i/dr_i = 107.680370762
 
 Similarly, when we compute thrust, torque, and power we also get the gradients (for either the nondimensional or dimensional form).  The gradients are returned as a multidimensional arrays.  The first index corresponds to the different input cases.  In the following example, we use only one input case (Uinf is a 1D array) so the first index is 0.  The derivatives with respect to scalar quantities and with respect to vector quantities are returned separately.
@@ -162,7 +162,7 @@ Let us compare the derivative of power against finite differencing for one of th
     :start-after: # 8 ---
     :end-before: # 8 ---
 
->>> (analytic) dP/dprecone = -4585.70730211
+>>> (analytic) dP/dprecone = -4585.70729746
 >>> (fin diff) dP/dprecone = -4585.71072668
 
 
@@ -172,5 +172,5 @@ Finally, we compare the derivative of power against finite differencing for one 
     :start-after: # 9 ---
     :end-before: # 9 ---
 
->>> (analytic) dP/dr_i = 848.368082036
+>>> (analytic) dP/dr_i = 848.368037506
 >>> (fin diff) dP/dr_i = 848.355994992

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3. Tutorial &mdash; CCBlade 1.0.0 documentation</title>
+    <title>3. Tutorial &mdash; CCBlade 1.0.5 documentation</title>
     
     <link rel="stylesheet" href="_static/nrel.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0.0',
+        VERSION:     '1.0.5',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="CCBlade 1.0.0 documentation" href="index.html" />
+    <link rel="top" title="CCBlade 1.0.5 documentation" href="index.html" />
     <link rel="next" title="4. Module Documentation" href="documentation.html" />
     <link rel="prev" title="2. Installation" href="installation.html" /> 
   </head>
@@ -41,7 +41,7 @@
         <li class="right" >
           <a href="installation.html" title="2. Installation"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -222,7 +222,7 @@
 </div>
 <div class="section" id="gradients">
 <span id="gradient-example"></span><h2>3.3. Gradients<a class="headerlink" href="#gradients" title="Permalink to this headline">¶</a></h2>
-<p>CCBlade optinally provides analytic gradients of every output with respect to all design variables.  This is accomplished using a direct method (adjoint is identical because there is only one state variable at each blade section).  Partial derivatives are provided by <a class="reference external" href="http://www-tapenade.inria.fr:8080/tapenade/index.jsp">Tapenade</a> and hand calculations.  Starting with the previous example for the NREL 5-MW reference model we add the keyword value <tt class="docutils literal"><span class="pre">derivatives=True</span></tt> in the constructor.</p>
+<p>CCBlade optinally provides analytic gradients of every output with respect to all design variables.  This is accomplished using an adjoint method (direct method is identical because there is only one state variable at each blade section).  Partial derivatives are provided by <a class="reference external" href="http://www-tapenade.inria.fr:8080/tapenade/index.jsp">Tapenade</a> and hand calculations.  Starting with the previous example for the NREL 5-MW reference model we add the keyword value <tt class="docutils literal"><span class="pre">derivatives=True</span></tt> in the constructor.</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="c"># create CCBlade object</span>
 <span class="n">rotor</span> <span class="o">=</span> <span class="n">CCBlade</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="n">chord</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">af</span><span class="p">,</span> <span class="n">Rhub</span><span class="p">,</span> <span class="n">Rtip</span><span class="p">,</span> <span class="n">B</span><span class="p">,</span> <span class="n">rho</span><span class="p">,</span> <span class="n">mu</span><span class="p">,</span>
                 <span class="n">precone</span><span class="p">,</span> <span class="n">tilt</span><span class="p">,</span> <span class="n">yaw</span><span class="p">,</span> <span class="n">shearExp</span><span class="p">,</span> <span class="n">hubHt</span><span class="p">,</span> <span class="n">nSector</span><span class="p">,</span> <span class="n">derivatives</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
@@ -232,7 +232,8 @@
 <div class="highlight-python"><div class="highlight"><pre><span class="n">Np</span><span class="p">,</span> <span class="n">Tp</span><span class="p">,</span> <span class="n">dNp_dX</span><span class="p">,</span> <span class="n">dTp_dX</span><span class="p">,</span> <span class="n">dNp_dprecurve</span><span class="p">,</span> <span class="n">dTp_dprecurve</span> <span class="o">=</span> \
     <span class="n">rotor</span><span class="o">.</span><span class="n">distributedAeroLoads</span><span class="p">(</span><span class="n">Uinf</span><span class="p">,</span> <span class="n">Omega</span><span class="p">,</span> <span class="n">pitch</span><span class="p">,</span> <span class="n">azimuth</span><span class="p">)</span>
 
-<span class="c"># X = [r, chord, theta, Rhub, Rtip, presweep, precone, tilt, hubHt]</span>
+<span class="c"># X = [r, chord, theta, Rhub, Rtip, presweep, precone,</span>
+<span class="c">#      tilt, hubHt, yaw, azimuth, Uinf, Omega, pitch]</span>
 
 <span class="n">dNp_dr</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
 <span class="n">dNp_dchord</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
@@ -243,6 +244,11 @@
 <span class="n">dNp_dprecone</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="p">:]</span>
 <span class="n">dNp_dtilt</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="p">:]</span>
 <span class="n">dNp_dhubHt</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">dNp_dyaw</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">dNp_dazimuth</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">dNp_dUinf</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">dNp_dOmega</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">dNp_dpitch</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">13</span><span class="p">,</span> <span class="p">:]</span>
 </pre></div>
 </div>
 <p>For each vector variable (with the exception of precurve) a change in the local quantity affects only the local normal load.  In other words: <span class="math">\(dNp_i/dr_j = 0 \text{ for all } i \neq j\)</span>.  Thus only the diagonal terms are returned in a 1D vector (<tt class="docutils literal"><span class="pre">dNp_dr[3]</span> <span class="pre">=</span></tt> <span class="math">\(dNp_3 / dr_3\)</span>).  Precurve affects the sections adjacent to it, so the returned matrix is tridiagonal.</p>
@@ -267,7 +273,7 @@
 </pre></div>
 </div>
 <p>The output is:</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">analytic</span><span class="p">)</span> <span class="n">dNp_i</span><span class="o">/</span><span class="n">dr_i</span> <span class="o">=</span> <span class="mf">107.680395266</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">analytic</span><span class="p">)</span> <span class="n">dNp_i</span><span class="o">/</span><span class="n">dr_i</span> <span class="o">=</span> <span class="mf">107.680395098</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">fin</span> <span class="n">diff</span><span class="p">)</span> <span class="n">dNp_i</span><span class="o">/</span><span class="n">dr_i</span> <span class="o">=</span> <span class="mf">107.680370762</span>
 </pre></div>
 </div>
@@ -275,12 +281,15 @@
 <div class="highlight-python"><div class="highlight"><pre><span class="n">P</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">dP_ds</span><span class="p">,</span> <span class="n">dT_ds</span><span class="p">,</span> <span class="n">dQ_ds</span><span class="p">,</span> <span class="n">dP_dv</span><span class="p">,</span> <span class="n">dT_dv</span><span class="p">,</span> <span class="n">dQ_dv</span> <span class="o">=</span> \
     <span class="n">rotor</span><span class="o">.</span><span class="n">evaluate</span><span class="p">([</span><span class="n">Uinf</span><span class="p">],</span> <span class="p">[</span><span class="n">Omega</span><span class="p">],</span> <span class="p">[</span><span class="n">pitch</span><span class="p">])</span>
 
-<span class="c"># scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]</span>
+<span class="c"># scalars = [precone, tilt, hubHt, Rhub, Rtip,</span>
+<span class="c">#            precurvetip, presweeptip, yaw,</span>
+<span class="c">#            Uinf, Omega, pitch]</span>
 <span class="c"># vectors = [r, chord, theta, precurve, presweep]</span>
 
 <span class="c"># unpack scalar derivatives</span>
 <span class="n">dP_dprecone</span><span class="p">,</span> <span class="n">dP_dtilt</span><span class="p">,</span> <span class="n">dP_dhubHt</span><span class="p">,</span> <span class="n">dP_dRhub</span><span class="p">,</span> <span class="n">dP_dRtip</span><span class="p">,</span> \
-    <span class="n">dP_dprecurvetip</span><span class="p">,</span> <span class="n">dP_dpresweeptip</span> <span class="o">=</span> <span class="n">dP_ds</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">dP_dprecurvetip</span><span class="p">,</span> <span class="n">dP_dpresweeptip</span><span class="p">,</span> <span class="n">dP_dyaw</span><span class="p">,</span> \
+    <span class="n">dP_dUinf</span><span class="p">,</span> <span class="n">dP_dOmega</span><span class="p">,</span> <span class="n">dP_dpitch</span> <span class="o">=</span> <span class="n">dP_ds</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
 
 <span class="c"># unpack vector derivatives</span>
 <span class="n">dP_dr</span> <span class="o">=</span> <span class="n">dP_dv</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
@@ -311,7 +320,7 @@
 <span class="k">print</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">analytic</span><span class="p">)</span> <span class="n">dP</span><span class="o">/</span><span class="n">dprecone</span> <span class="o">=</span> <span class="o">-</span><span class="mf">4585.70730211</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">analytic</span><span class="p">)</span> <span class="n">dP</span><span class="o">/</span><span class="n">dprecone</span> <span class="o">=</span> <span class="o">-</span><span class="mf">4585.70729746</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">fin</span> <span class="n">diff</span><span class="p">)</span> <span class="n">dP</span><span class="o">/</span><span class="n">dprecone</span> <span class="o">=</span> <span class="o">-</span><span class="mf">4585.71072668</span>
 </pre></div>
 </div>
@@ -337,7 +346,7 @@
 <span class="k">print</span>
 </pre></div>
 </div>
-<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">analytic</span><span class="p">)</span> <span class="n">dP</span><span class="o">/</span><span class="n">dr_i</span> <span class="o">=</span> <span class="mf">848.368082036</span>
+<div class="highlight-python"><div class="highlight"><pre><span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">analytic</span><span class="p">)</span> <span class="n">dP</span><span class="o">/</span><span class="n">dr_i</span> <span class="o">=</span> <span class="mf">848.368037506</span>
 <span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">fin</span> <span class="n">diff</span><span class="p">)</span> <span class="n">dP</span><span class="o">/</span><span class="n">dr_i</span> <span class="o">=</span> <span class="mf">848.355994992</span>
 </pre></div>
 </div>
@@ -400,12 +409,12 @@
         <li class="right" >
           <a href="installation.html" title="2. Installation"
              >previous</a> |</li>
-        <li><a href="index.html">CCBlade 1.0.0 documentation</a> &raquo;</li> 
+        <li><a href="index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, NREL.
-      Last updated on Oct 01, 2013.
+      Last updated on Jan 08, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
     </div>
   </body>
