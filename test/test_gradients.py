@@ -725,6 +725,250 @@ class TestGradients(unittest.TestCase):
         np.testing.assert_allclose(dCP_dhubht_fd, dCP_dhubht, rtol=5e-5, atol=1e-8)
 
 
+
+    def test_dyaw1(self):
+
+        dNp_dyaw = self.dNp_dX[9, :]
+        dTp_dyaw = self.dTp_dX[9, :]
+
+        yaw = float(self.yaw)
+        delta = 1e-6
+        yaw += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        Npd, Tpd = rotor.distributedAeroLoads(self.Uinf, self.Omega, self.pitch, self.azimuth)
+
+        dNp_dyaw_fd = (Npd - self.Np) / delta
+        dTp_dyaw_fd = (Tpd - self.Tp) / delta
+
+        np.testing.assert_allclose(dNp_dyaw_fd, dNp_dyaw, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(dTp_dyaw_fd, dTp_dyaw, rtol=1e-5, atol=1e-8)
+
+
+    def test_dyaw2(self):
+
+        dT_dyaw = self.dT_ds[0, 7]
+        dQ_dyaw = self.dQ_ds[0, 7]
+        dP_dyaw = self.dP_ds[0, 7]
+
+        yaw = float(self.yaw)
+        delta = 1e-6
+        yaw += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        Pd, Td, Qd = rotor.evaluate([self.Uinf], [self.Omega], [self.pitch], coefficient=False)
+
+        dT_dyaw_fd = (Td - self.T) / delta
+        dQ_dyaw_fd = (Qd - self.Q) / delta
+        dP_dyaw_fd = (Pd - self.P) / delta
+
+        np.testing.assert_allclose(dT_dyaw_fd, dT_dyaw, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(dQ_dyaw_fd, dQ_dyaw, rtol=5e-5, atol=1e-8)
+        np.testing.assert_allclose(dP_dyaw_fd, dP_dyaw, rtol=5e-5, atol=1e-8)
+
+
+
+    def test_dyaw3(self):
+
+        dCT_dyaw = self.dCT_ds[0, 7]
+        dCQ_dyaw = self.dCQ_ds[0, 7]
+        dCP_dyaw = self.dCP_ds[0, 7]
+
+        yaw = float(self.yaw)
+        delta = 1e-6
+        yaw += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        CPd, CTd, CQd = rotor.evaluate([self.Uinf], [self.Omega], [self.pitch], coefficient=True)
+
+        dCT_dyaw_fd = (CTd - self.CT) / delta
+        dCQ_dyaw_fd = (CQd - self.CQ) / delta
+        dCP_dyaw_fd = (CPd - self.CP) / delta
+
+        np.testing.assert_allclose(dCT_dyaw_fd, dCT_dyaw, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(dCQ_dyaw_fd, dCQ_dyaw, rtol=5e-5, atol=1e-8)
+        np.testing.assert_allclose(dCP_dyaw_fd, dCP_dyaw, rtol=5e-5, atol=1e-8)
+
+
+
+    def test_dazimuth1(self):
+
+        dNp_dazimuth = self.dNp_dX[10, :]
+        dTp_dazimuth = self.dTp_dX[10, :]
+
+        azimuth = float(self.azimuth)
+        delta = 1e-6*azimuth
+        azimuth += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        Npd, Tpd = rotor.distributedAeroLoads(self.Uinf, self.Omega, self.pitch, azimuth)
+
+        dNp_dazimuth_fd = (Npd - self.Np) / delta
+        dTp_dazimuth_fd = (Tpd - self.Tp) / delta
+
+        np.testing.assert_allclose(dNp_dazimuth_fd, dNp_dazimuth, rtol=1e-5, atol=1e-6)
+        np.testing.assert_allclose(dTp_dazimuth_fd, dTp_dazimuth, rtol=1e-5, atol=1e-6)
+
+
+    def test_dUinf1(self):
+
+        dNp_dUinf = self.dNp_dX[11, :]
+        dTp_dUinf = self.dTp_dX[11, :]
+
+        Uinf = float(self.Uinf)
+        delta = 1e-6*Uinf
+        Uinf += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        Npd, Tpd = rotor.distributedAeroLoads(Uinf, self.Omega, self.pitch, self.azimuth)
+
+        dNp_dUinf_fd = (Npd - self.Np) / delta
+        dTp_dUinf_fd = (Tpd - self.Tp) / delta
+
+        np.testing.assert_allclose(dNp_dUinf_fd, dNp_dUinf, rtol=1e-5, atol=1e-6)
+        np.testing.assert_allclose(dTp_dUinf_fd, dTp_dUinf, rtol=1e-5, atol=1e-6)
+
+
+    def test_dUinf2(self):
+
+        dT_dUinf = self.dT_ds[0, 8]
+        dQ_dUinf = self.dQ_ds[0, 8]
+        dP_dUinf = self.dP_ds[0, 8]
+
+        Uinf = float(self.Uinf)
+        delta = 1e-6*Uinf
+        Uinf += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        Pd, Td, Qd = rotor.evaluate([Uinf], [self.Omega], [self.pitch], coefficient=False)
+
+        dT_dUinf_fd = (Td - self.T) / delta
+        dQ_dUinf_fd = (Qd - self.Q) / delta
+        dP_dUinf_fd = (Pd - self.P) / delta
+
+        np.testing.assert_allclose(dT_dUinf_fd, dT_dUinf, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(dQ_dUinf_fd, dQ_dUinf, rtol=5e-5, atol=1e-8)
+        np.testing.assert_allclose(dP_dUinf_fd, dP_dUinf, rtol=5e-5, atol=1e-8)
+
+
+
+    def test_dUinf3(self):
+
+        dCT_dUinf = self.dCT_ds[0, 8]
+        dCQ_dUinf = self.dCQ_ds[0, 8]
+        dCP_dUinf = self.dCP_ds[0, 8]
+
+        Uinf = float(self.Uinf)
+        delta = 1e-6*Uinf
+        Uinf += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        CPd, CTd, CQd = rotor.evaluate([Uinf], [self.Omega], [self.pitch], coefficient=True)
+
+        dCT_dUinf_fd = (CTd - self.CT) / delta
+        dCQ_dUinf_fd = (CQd - self.CQ) / delta
+        dCP_dUinf_fd = (CPd - self.CP) / delta
+
+        np.testing.assert_allclose(dCT_dUinf_fd, dCT_dUinf, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(dCQ_dUinf_fd, dCQ_dUinf, rtol=5e-5, atol=1e-8)
+        np.testing.assert_allclose(dCP_dUinf_fd, dCP_dUinf, rtol=5e-5, atol=1e-8)
+
+
+    def test_dOmega1(self):
+
+        dNp_dOmega = self.dNp_dX[12, :]
+        dTp_dOmega = self.dTp_dX[12, :]
+
+        Omega = float(self.Omega)
+        delta = 1e-6*Omega
+        Omega += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        Npd, Tpd = rotor.distributedAeroLoads(self.Uinf, Omega, self.pitch, self.azimuth)
+
+        dNp_dOmega_fd = (Npd - self.Np) / delta
+        dTp_dOmega_fd = (Tpd - self.Tp) / delta
+
+        np.testing.assert_allclose(dNp_dOmega_fd, dNp_dOmega, rtol=1e-5, atol=1e-6)
+        np.testing.assert_allclose(dTp_dOmega_fd, dTp_dOmega, rtol=1e-5, atol=1e-6)
+
+
+    def test_dOmega2(self):
+
+        dT_dOmega = self.dT_ds[0, 9]
+        dQ_dOmega = self.dQ_ds[0, 9]
+        dP_dOmega = self.dP_ds[0, 9]
+
+        Omega = float(self.Omega)
+        delta = 1e-6*Omega
+        Omega += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        Pd, Td, Qd = rotor.evaluate([self.Uinf], [Omega], [self.pitch], coefficient=False)
+
+        dT_dOmega_fd = (Td - self.T) / delta
+        dQ_dOmega_fd = (Qd - self.Q) / delta
+        dP_dOmega_fd = (Pd - self.P) / delta
+
+        np.testing.assert_allclose(dT_dOmega_fd, dT_dOmega, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(dQ_dOmega_fd, dQ_dOmega, rtol=5e-5, atol=1e-8)
+        np.testing.assert_allclose(dP_dOmega_fd, dP_dOmega, rtol=5e-5, atol=1e-8)
+
+
+
+    def test_dOmega3(self):
+
+        dCT_dOmega = self.dCT_ds[0, 9]
+        dCQ_dOmega = self.dCQ_ds[0, 9]
+        dCP_dOmega = self.dCP_ds[0, 9]
+
+        Omega = float(self.Omega)
+        delta = 1e-6*Omega
+        Omega += delta
+
+        rotor = CCBlade(self.r, self.chord, self.theta, self.af, self.Rhub, self.Rtip,
+            self.B, self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp,
+            self.hubHt, self.nSector, derivatives=False)
+
+        CPd, CTd, CQd = rotor.evaluate([self.Uinf], [Omega], [self.pitch], coefficient=True)
+
+        dCT_dOmega_fd = (CTd - self.CT) / delta
+        dCQ_dOmega_fd = (CQd - self.CQ) / delta
+        dCP_dOmega_fd = (CPd - self.CP) / delta
+
+        np.testing.assert_allclose(dCT_dOmega_fd, dCT_dOmega, rtol=1e-5, atol=1e-8)
+        np.testing.assert_allclose(dCQ_dOmega_fd, dCQ_dOmega, rtol=5e-5, atol=1e-8)
+        np.testing.assert_allclose(dCP_dOmega_fd, dCP_dOmega, rtol=5e-5, atol=1e-8)
+
+
+
     def test_dprecurve1(self):
 
         precurve = np.linspace(1, 10, self.n)
@@ -1157,3 +1401,11 @@ class TestGradients(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
+    # from unittest import TestSuite
+
+    # blah = TestSuite()
+    # blah.addTest(TestGradients('test_dOmega1'))
+    # blah.addTest(TestGradients('test_dOmega2'))
+    # blah.addTest(TestGradients('test_dOmega3'))
+
+    # unittest.TextTestRunner().run(blah)

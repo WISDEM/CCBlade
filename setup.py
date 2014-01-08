@@ -14,7 +14,7 @@ setup(
     author_email='andrew.ning@nrel.gov',
     package_dir={'': 'src'},
     py_modules=['ccblade'],
-    install_requires=['airfoilprep>=1.0'],
+    install_requires=['airfoilprep>=1.0'],  # , 'zope.interface'],
     # test_suite='test.test_ccblade.py',
     license='Apache License, Version 2.0',
     ext_modules=[Extension('_bem', ['src/bem.f90'], extra_compile_args=['-O2'])],

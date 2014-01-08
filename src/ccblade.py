@@ -473,13 +473,20 @@ class CCBlade:
         if not self.derivatives:
             return Vx, Vy, 0.0, 0.0, 0.0, 0.0
 
-        # y = [r, precurve, presweep, precone, tilt, hubHt]  (derivative order)
+        # # y = [r, precurve, presweep, precone, tilt, hubHt]  (derivative order)
+        # y = [r, precurve, presweep, precone, tilt, hubHt, yaw, azimuth, Uinf, Omega]  (derivative order)
         n = len(self.r)
-        dy_dy = np.eye(3*n+3)
+        dy_dy = np.eye(3*n+7)
 
-        Vxd, Vyd = _bem.windcomponents_dv(self.r, self.precurve, self.presweep,
-            self.precone, self.yaw, self.tilt, azimuth, Uinf, Omega, self.hubHt, self.shearExp,
-            dy_dy[:, :n], dy_dy[:, n:2*n], dy_dy[:, 2*n:3*n], dy_dy[:, 3*n], dy_dy[:, 3*n+1], dy_dy[:, 3*n+2])
+        _, Vxd, _, Vyd = _bem.windcomponents_dv(self.r, dy_dy[:, :n], self.precurve, dy_dy[:, n:2*n],
+            self.presweep, dy_dy[:, 2*n:3*n], self.precone, dy_dy[:, 3*n], self.yaw, dy_dy[:, 3*n+3],
+            self.tilt, dy_dy[:, 3*n+1], azimuth, dy_dy[:, 3*n+4], Uinf, dy_dy[:, 3*n+5],
+            Omega, dy_dy[:, 3*n+6], self.hubHt, dy_dy[:, 3*n+2], self.shearExp)
+
+
+        # Vxd, Vyd = _bem.windcomponents_dv(self.r, self.precurve, self.presweep,
+        #     self.precone, self.yaw, self.tilt, azimuth, Uinf, Omega, self.hubHt, self.shearExp,
+        #     dy_dy[:, :n], dy_dy[:, n:2*n], dy_dy[:, 2*n:3*n], dy_dy[:, 3*n], dy_dy[:, 3*n+1], dy_dy[:, 3*n+2])
 
         dVx_dr = np.diag(Vxd[:n, :])  # off-diagonal terms are known to be zero and not needed
         dVy_dr = np.diag(Vyd[:n, :])
@@ -490,7 +497,8 @@ class CCBlade:
         dVx_dsweep = np.diag(Vxd[2*n:3*n, :])  # off-diagonal terms are known to be zero and not needed
         dVy_dsweep = np.diag(Vyd[2*n:3*n, :])
 
-        # w = [r, presweep, precone, tilt, hub]
+        # # w = [r, presweep, precone, tilt, hub]
+        # w = [r, presweep, precone, tilt, hubHt, yaw, azimuth, Uinf, Omega]
         dVx_dw = np.vstack((dVx_dr, dVx_dsweep, Vxd[3*n:, :]))
         dVy_dw = np.vstack((dVy_dr, dVy_dsweep, Vyd[3*n:, :]))
 
@@ -640,8 +648,9 @@ class CCBlade:
 
                 # stack
                 # z = [r, chord, theta, Rhub, Rtip]
-                # w = [r, presweep, precone, tilt, hubHt]
-                # X = [r, chord, theta, Rhub, Rtip, presweep, precone, tilt, hubHt]
+                # # w = [r, presweep, precone, tilt, hubHt]
+                # w = [r, presweep, precone, tilt, hubHt, yaw, azimuth, Uinf, Omega]
+                # X = [r, chord, theta, Rhub, Rtip, presweep, precone, tilt, hubHt, yaw, azimuth, Uinf, Omega]
                 dNp_dz[0, :] += dNp_dw[0, :]  # add partial w.r.t. r
                 dTp_dz[0, :] += dTp_dw[0, :]
 
@@ -649,7 +658,7 @@ class CCBlade:
                 dTp_dX = np.vstack((dTp_dz, dTp_dw[1:, :]))
 
                 # add chain rule for conversion to radians
-                ridx = [2, 6, 7]
+                ridx = [2, 6, 7, 9, 10]
                 dNp_dX[ridx, :] *= pi/180.0
                 dTp_dX[ridx, :] *= pi/180.0
 
@@ -711,7 +720,7 @@ class CCBlade:
         The rotor radius R, may not actually be Rtip if precone and precurve are both nonzero
         ``R = Rtip*cos(precone) + precurveTip*sin(precone)``
 
-        order of scalar quantities is: s = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
+        order of scalar quantities is: s = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip, yaw, Uinf, Omega]
 
         order of vector quantities is: v = [r, chord, theta, precurve, presweep]
 
@@ -734,8 +743,8 @@ class CCBlade:
         P = np.zeros(npts)
 
         if self.derivatives:
-            dT_ds = np.zeros((npts, 7))
-            dQ_ds = np.zeros((npts, 7))
+            dT_ds = np.zeros((npts, 10))
+            dQ_ds = np.zeros((npts, 10))
             dT_dv = np.zeros((npts, 5, len(self.r)))
             dQ_dv = np.zeros((npts, 5, len(self.r)))
 
@@ -781,17 +790,32 @@ class CCBlade:
 
             if self.derivatives:
 
+                # s = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip, yaw, Uinf, Omega]
+
                 dR_ds = np.array([-self.Rtip*sin(self.precone)*pi/180.0 + self.precurveTip*cos(self.precone)*pi/180.0,
-                    0.0, 0.0, 0.0, cos(self.precone), sin(self.precone), 0.0])
+                    0.0, 0.0, 0.0, cos(self.precone), sin(self.precone), 0.0, 0.0, 0.0, 0.0])
                 dR_ds = np.dot(np.ones((npts, 1)), np.array([dR_ds]))  # same for each operating condition
 
-                dCT_ds = (dT_ds.T / (q*A) - dR_ds.T * 2.0*CT/self.rotorR).T
+                dA_ds = 2*pi*self.rotorR*dR_ds
+
+                dU_ds = np.zeros((10, 10))
+                dU_ds[:, 8] = 1.0
+
+                dOmega_ds = np.zeros((10, 10))
+                dOmega_ds[:, 9] = 1.0
+
+                dq_ds = self.rho*Uinf*dU_ds
+
+                # # dCT_ds = (dT_ds.T / (q*A) - dR_ds.T * 2.0*CT/self.rotorR).T
+                dCT_ds = (CT * (dT_ds.T/T - dA_ds.T/A - dq_ds.T/q)).T
                 dCT_dv = (dT_dv.T / (q*A)).T
 
-                dCQ_ds = (dQ_ds.T / (q*self.rotorR*A) - dR_ds.T * 3.0*CQ/self.rotorR).T
+                # # dCQ_ds = (dQ_ds.T / (q*self.rotorR*A) - dR_ds.T * 3.0*CQ/self.rotorR).T
+                dCQ_ds = (CQ * (dQ_ds.T/Q - dA_ds.T/A - dq_ds.T/q - dR_ds.T/self.rotorR)).T
                 dCQ_dv = (dQ_dv.T / (q*self.rotorR*A)).T
 
-                dCP_ds = (dQ_ds.T * CP/Q - dR_ds.T * 2.0*CP/self.rotorR).T
+                # # dCP_ds = (dQ_ds.T * CP/Q - dR_ds.T * 2.0*CP/self.rotorR).T
+                dCP_ds = (CP * (dQ_ds.T/Q + dOmega_ds.T/Omega - dA_ds.T/A - dq_ds.T/q - dU_ds.T/Uinf)).T
                 dCP_dv = (dQ_dv.T * CP/Q).T
 
                 return CP, CT, CQ, dCP_ds, dCT_ds, dCQ_ds, dCP_dv, dCT_dv, dCQ_dv
@@ -801,10 +825,12 @@ class CCBlade:
 
 
         if self.derivatives:
-            # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
+            # # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
+            # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip, yaw, Uinf, Omega]
             # vectors = [r, chord, theta, precurve, presweep]
 
             dP_ds = (dQ_ds.T * Omega*pi/30.0).T
+            dP_ds[:, 9] += Q*pi/30.0
             dP_dv = (dQ_dv.T * Omega*pi/30.0).T
 
             return P, T, Q, dP_ds, dT_ds, dQ_ds, dP_dv, dT_dv, dQ_dv
@@ -824,7 +850,8 @@ class CCBlade:
             _bem.thrusttorque_bv(Np, Tp, r, precurve, presweep, precone, Rhub, Rtip, precurveTip, presweepTip, Tb, Qb)
 
 
-        # X = [r, chord, theta, Rhub, Rtip, presweep, precone, tilt, hubHt]
+        # # X = [r, chord, theta, Rhub, Rtip, presweep, precone, tilt, hubHt]
+        # X = [r, chord, theta, Rhub, Rtip, presweep, precone, tilt, hubHt, yaw, azimuth, Uinf, Omega]
         dT_dNp = Npb[0, :]
         dQ_dNp = Npb[1, :]
         dT_dTp = Tpb[0, :]
@@ -858,11 +885,20 @@ class CCBlade:
         dQ_dpresweeptip = presweeptipb[1]
         dT_dprecurve = np.sum(dT_dNp*dNp_dprecurve + dT_dTp*dTp_dprecurve, axis=1) + precurveb[0, :]
         dQ_dprecurve = np.sum(dQ_dNp*dNp_dprecurve + dQ_dTp*dTp_dprecurve, axis=1) + precurveb[1, :]
+        dT_dyaw = np.sum(dT_dX[9, :])
+        dQ_dyaw = np.sum(dQ_dX[9, :])
+        dT_dUinf = np.sum(dT_dX[11, :])
+        dQ_dUinf = np.sum(dQ_dX[11, :])
+        dT_dOmega = np.sum(dT_dX[12, :])
+        dQ_dOmega = np.sum(dQ_dX[12, :])
 
 
-        # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
-        dT_ds = np.array([dT_dprecone, dT_dtilt, dT_dhubht, dT_dRhub, dT_dRtip, dT_dprecurvetip, dT_dpresweeptip])
-        dQ_ds = np.array([dQ_dprecone, dQ_dtilt, dQ_dhubht, dQ_dRhub, dQ_dRtip, dQ_dprecurvetip, dQ_dpresweeptip])
+        # # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
+        # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip, yaw, Uinf, Omega]
+        dT_ds = np.array([dT_dprecone, dT_dtilt, dT_dhubht, dT_dRhub, dT_dRtip,
+            dT_dprecurvetip, dT_dpresweeptip, dT_dyaw, dT_dUinf, dT_dOmega])
+        dQ_ds = np.array([dQ_dprecone, dQ_dtilt, dQ_dhubht, dQ_dRhub, dQ_dRtip,
+            dQ_dprecurvetip, dQ_dpresweeptip, dQ_dyaw, dQ_dUinf, dQ_dOmega])
 
 
         # vectors = [r, chord, theta, precurve, presweep]

@@ -10,7 +10,7 @@ If you came to this page directly without going through the NWTC Information Por
 
 ## Prerequisites
 
-C compiler, Fortran compiler, NumPy, SciPy
+Fortran compiler, NumPy, SciPy, zope.interface
 
 ## Installation
 
