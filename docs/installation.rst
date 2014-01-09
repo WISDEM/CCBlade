@@ -4,7 +4,7 @@ Installation
 .. admonition:: Prerequisites
    :class: warning
 
-   C compiler, Fortran compiler, NumPy, SciPy
+   Fortran compiler, NumPy, SciPy, zope.interface
 
 Download either CCBlade.py-|release|.tar.gz or CCBlade.py-|release|.zip and uncompress/unpack it.
 

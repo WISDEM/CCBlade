@@ -23,7 +23,7 @@ codeName = u'CCBlade'
 authorName = u'S. Andrew Ning'
 copyright = u'2013, NREL'
 version = '1.0'
-release = '1.0.0'
+release = '1.0.5'
 
 # -- General configuration -----------------------------------------------------
 

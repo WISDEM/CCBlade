@@ -377,13 +377,17 @@ class CCBlade:
 
 
 
-    def __loads(self, phi, r, chord, theta, af, Vx, Vy):
+    def __loads(self, phi, rotating, r, chord, theta, af, Vx, Vy):
         """normal and tangential loads at one section (and optionally derivatives)"""
 
         cphi = cos(phi)
         sphi = sin(phi)
 
-        zero, a, ap = self.__runBEM(phi, r, chord, theta, af, Vx, Vy)
+        if rotating:
+            _, a, ap = self.__runBEM(phi, r, chord, theta, af, Vx, Vy)
+        else:
+            a = 0.0
+            ap = 0.0
 
         alpha, W, Re = _bem.relativewind(phi, a, ap, Vx, Vy, self.pitch,
                                          chord, theta, self.rho, self.mu)
@@ -402,11 +406,18 @@ class CCBlade:
 
 
         # derivative of residual function
-        dR_dx, da_dx, dap_dx = self.__residualDerivatives(phi, r, chord, theta, af, Vx, Vy)
+        if rotating:
+            dR_dx, da_dx, dap_dx = self.__residualDerivatives(phi, r, chord, theta, af, Vx, Vy)
+            dphi_dx = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+        else:
+            dR_dx = np.zeros(9)
+            dR_dx[0] = 1.0  # just to prevent divide by zero
+            da_dx = np.zeros(9)
+            dap_dx = np.zeros(9)
+            dphi_dx = np.zeros(9)
 
         # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip, pitch]  (derivative order)
         dx_dx = np.eye(9)
-        dphi_dx = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
         dchord_dx = np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
 
         # alpha, W, Re (Tapenade)
@@ -432,34 +443,6 @@ class CCBlade:
         dTp_dx = Tp*(1.0/ct*dct_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
 
         return Np, Tp, dNp_dx, dTp_dx, dR_dx
-
-
-    def __loads_nonRotating(self, chord, theta, af, Vx, Vy):
-        """compute loads in batch for non-rotating case"""
-
-        n = len(chord)
-        W = np.zeros(n)
-        cl = np.zeros(n)
-        cd = np.zeros(n)
-
-        for i in range(n):
-
-            phi = pi/2.0
-            a = 0.0
-            ap = 0.0
-
-            alpha, W[i], Re = _bem.relativewind(phi, a, ap, Vx[i], Vy[i], self.pitch,
-                                                chord[i], theta[i], self.rho, self.mu)
-            cl[i], cd[i] = af[i].evaluate(alpha, Re)
-
-        cn = cd
-        ct = cl
-
-        q = 0.5*self.rho*W**2
-        Np = cn*q*chord
-        Tp = ct*q*chord
-
-        return Np, Tp
 
 
 
@@ -542,35 +525,34 @@ class CCBlade:
         Vx, Vy, dVx_dw, dVy_dw, dVx_dcurve, dVy_dcurve = self.__windComponents(Uinf, Omega, azimuth)
 
 
-        if Omega == 0:  # non-rotating
+        # initialize
+        n = len(self.r)
+        Np = np.zeros(n)
+        Tp = np.zeros(n)
 
-            Np, Tp = self.__loads_nonRotating(self.chord, self.theta, self.af, Vx, Vy)
+        dNp_dVx = np.zeros(n)
+        dTp_dVx = np.zeros(n)
+        dNp_dVy = np.zeros(n)
+        dTp_dVy = np.zeros(n)
+        dNp_dz = np.zeros((6, n))
+        dTp_dz = np.zeros((6, n))
 
-            return Np, Tp  # TODO: derivatives here
+        errf = self.__errorFunction
+        rotating = (Omega != 0)
 
-        else:
+        # ---------------- loop across blade ------------------
+        for i in range(n):
 
-            # initialize
-            n = len(self.r)
-            Np = np.zeros(n)
-            Tp = np.zeros(n)
+            # index dependent arguments
+            args = (self.r[i], self.chord[i], self.theta[i], self.af[i], Vx[i], Vy[i])
 
-            dNp_dVx = np.zeros(n)
-            dTp_dVx = np.zeros(n)
-            dNp_dVy = np.zeros(n)
-            dTp_dVy = np.zeros(n)
-            dNp_dz = np.zeros((6, n))
-            dTp_dz = np.zeros((6, n))
+            if not rotating:  # non-rotating
 
-            errf = self.__errorFunction
+                phi_star = pi/2.0
 
-            # ---------------- loop across blade ------------------
-            for i in range(n):
+            else:
 
                 # ------ BEM solution method see (Ning, doi:10.1002/we.1636) ------
-
-                # index dependent arguments
-                args = (self.r[i], self.chord[i], self.theta[i], self.af[i], Vx[i], Vy[i])
 
                 # set standard limits
                 epsilon = 1e-6
@@ -596,65 +578,66 @@ class CCBlade:
 
                 # ----------------------------------------------------------------
 
-                # derivatives of residual
+            # derivatives of residual
 
-                Np[i], Tp[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, *args)
+            Np[i], Tp[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
 
-                if self.derivatives:
-                    # separate state vars from design vars
-                    # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip, pitch]  (derivative order)
-                    dNp_dy = dNp_dx[0]
-                    dNp_dx = dNp_dx[1:]
-                    dTp_dy = dTp_dx[0]
-                    dTp_dx = dTp_dx[1:]
-                    dR_dy = dR_dx[0]
-                    dR_dx = dR_dx[1:]
+            if self.derivatives:
+                # separate state vars from design vars
+                # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip, pitch]  (derivative order)
+                dNp_dy = dNp_dx[0]
+                dNp_dx = dNp_dx[1:]
+                dTp_dy = dTp_dx[0]
+                dTp_dx = dTp_dx[1:]
+                dR_dy = dR_dx[0]
+                dR_dx = dR_dx[1:]
 
-                    # direct (or adjoint) total derivatives
-                    DNp_Dx = dNp_dx - dNp_dy/dR_dy*dR_dx
-                    DTp_Dx = dTp_dx - dTp_dy/dR_dy*dR_dx
+                # direct (or adjoint) total derivatives
+                DNp_Dx = dNp_dx - dNp_dy/dR_dy*dR_dx
+                DTp_Dx = dTp_dx - dTp_dy/dR_dy*dR_dx
 
-                    # parse components
-                    # z = [r, chord, theta, Rhub, Rtip, pitch]
-                    zidx = [4, 0, 1, 5, 6, 7]
-                    dNp_dz[:, i] = DNp_Dx[zidx]
-                    dTp_dz[:, i] = DTp_Dx[zidx]
-
-                    dNp_dVx[i] = DNp_Dx[2]
-                    dTp_dVx[i] = DTp_Dx[2]
-
-                    dNp_dVy[i] = DNp_Dx[3]
-                    dTp_dVy[i] = DTp_Dx[3]
-
-
-
-            if not self.derivatives:
-                return Np, Tp
-            else:
-
-                # chain rule
-                dNp_dw = dNp_dVx*dVx_dw + dNp_dVy*dVy_dw
-                dTp_dw = dTp_dVx*dVx_dw + dTp_dVy*dVy_dw
-
-                dNp_dprecurve = dNp_dVx*dVx_dcurve + dNp_dVy*dVy_dcurve
-                dTp_dprecurve = dTp_dVx*dVx_dcurve + dTp_dVy*dVy_dcurve
-
-                # stack
+                # parse components
                 # z = [r, chord, theta, Rhub, Rtip, pitch]
-                # w = [r, presweep, precone, tilt, hubHt, yaw, azimuth, Uinf, Omega]
-                # X = [r, chord, theta, Rhub, Rtip, presweep, precone, tilt, hubHt, yaw, azimuth, Uinf, Omega, pitch]
-                dNp_dz[0, :] += dNp_dw[0, :]  # add partial w.r.t. r
-                dTp_dz[0, :] += dTp_dw[0, :]
+                zidx = [4, 0, 1, 5, 6, 7]
+                dNp_dz[:, i] = DNp_Dx[zidx]
+                dTp_dz[:, i] = DTp_Dx[zidx]
 
-                dNp_dX = np.vstack((dNp_dz[:-1, :], dNp_dw[1:, :], dNp_dz[-1, :]))
-                dTp_dX = np.vstack((dTp_dz[:-1, :], dTp_dw[1:, :], dTp_dz[-1, :]))
+                dNp_dVx[i] = DNp_Dx[2]
+                dTp_dVx[i] = DTp_Dx[2]
 
-                # add chain rule for conversion to radians
-                ridx = [2, 6, 7, 9, 10, 13]
-                dNp_dX[ridx, :] *= pi/180.0
-                dTp_dX[ridx, :] *= pi/180.0
+                dNp_dVy[i] = DNp_Dx[3]
+                dTp_dVy[i] = DTp_Dx[3]
 
-                return Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve
+
+
+        if not self.derivatives:
+            return Np, Tp
+
+        else:
+
+            # chain rule
+            dNp_dw = dNp_dVx*dVx_dw + dNp_dVy*dVy_dw
+            dTp_dw = dTp_dVx*dVx_dw + dTp_dVy*dVy_dw
+
+            dNp_dprecurve = dNp_dVx*dVx_dcurve + dNp_dVy*dVy_dcurve
+            dTp_dprecurve = dTp_dVx*dVx_dcurve + dTp_dVy*dVy_dcurve
+
+            # stack
+            # z = [r, chord, theta, Rhub, Rtip, pitch]
+            # w = [r, presweep, precone, tilt, hubHt, yaw, azimuth, Uinf, Omega]
+            # X = [r, chord, theta, Rhub, Rtip, presweep, precone, tilt, hubHt, yaw, azimuth, Uinf, Omega, pitch]
+            dNp_dz[0, :] += dNp_dw[0, :]  # add partial w.r.t. r
+            dTp_dz[0, :] += dTp_dw[0, :]
+
+            dNp_dX = np.vstack((dNp_dz[:-1, :], dNp_dw[1:, :], dNp_dz[-1, :]))
+            dTp_dX = np.vstack((dTp_dz[:-1, :], dTp_dw[1:, :], dTp_dz[-1, :]))
+
+            # add chain rule for conversion to radians
+            ridx = [2, 6, 7, 9, 10, 13]
+            dNp_dX[ridx, :] *= pi/180.0
+            dTp_dX[ridx, :] *= pi/180.0
+
+            return Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve
 
 
 
@@ -814,7 +797,7 @@ class CCBlade:
 
 
         if self.derivatives:
-            # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip, yaw, Uinf, Omega]
+            # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip, yaw, Uinf, Omega, pitch]
             # vectors = [r, chord, theta, precurve, presweep]
 
             dP_ds = (dQ_ds.T * Omega*pi/30.0).T

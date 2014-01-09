@@ -4,8 +4,8 @@ basepath = os.path.join(os.path.expanduser('~'), 'Dropbox', 'NREL', '5MW_files',
 os.chdir(basepath)
 
 # just to temporarily change PYTHONPATH without installing
-import sys
-sys.path.append(os.path.expanduser('~') + '/Dropbox/NREL/CCBlade/src')
+# import sys
+# sys.path.append(os.path.expanduser('~') + '/Dropbox/NREL/CCBlade/src')
 
 
 # 1 ---------
@@ -97,7 +97,8 @@ azimuth = 0.0
 Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve = \
     rotor.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
-# X = [r, chord, theta, Rhub, Rtip, presweep, precone, tilt, hubHt]
+# X = [r, chord, theta, Rhub, Rtip, presweep, precone,
+#      tilt, hubHt, yaw, azimuth, Uinf, Omega, pitch]
 
 dNp_dr = dNp_dX[0, :]
 dNp_dchord = dNp_dX[1, :]
@@ -108,6 +109,11 @@ dNp_dpresweep = dNp_dX[5, :]
 dNp_dprecone = dNp_dX[6, :]
 dNp_dtilt = dNp_dX[7, :]
 dNp_dhubHt = dNp_dX[8, :]
+dNp_dyaw = dNp_dX[9, :]
+dNp_dazimuth = dNp_dX[10, :]
+dNp_dUinf = dNp_dX[11, :]
+dNp_dOmega = dNp_dX[12, :]
+dNp_dpitch = dNp_dX[13, :]
 
 # 5 ----------
 
@@ -118,12 +124,15 @@ dNp_dhubHt = dNp_dX[8, :]
 P, T, Q, dP_ds, dT_ds, dQ_ds, dP_dv, dT_dv, dQ_dv = \
     rotor.evaluate([Uinf], [Omega], [pitch])
 
-# scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip]
+# scalars = [precone, tilt, hubHt, Rhub, Rtip,
+#            precurvetip, presweeptip, yaw,
+#            Uinf, Omega, pitch]
 # vectors = [r, chord, theta, precurve, presweep]
 
 # unpack scalar derivatives
 dP_dprecone, dP_dtilt, dP_dhubHt, dP_dRhub, dP_dRtip, \
-    dP_dprecurvetip, dP_dpresweeptip = dP_ds[0, :]
+    dP_dprecurvetip, dP_dpresweeptip, dP_dyaw, \
+    dP_dUinf, dP_dOmega, dP_dpitch = dP_ds[0, :]
 
 # unpack vector derivatives
 dP_dr = dP_dv[0, 0, :]
