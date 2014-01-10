@@ -245,8 +245,12 @@ class CCBlade:
             ``1`` if tilt, yaw, and shearExp are all 0.0.  Otherwise set to a minimum of 4.
         precurve : array_like, optional (m)
             location of blade pitch axis in x-direction of :ref:`blade coordinate system <azimuth_blade_coord>`
+        precurveTip : float, optional (m)
+            location of blade pitch axis in x-direction at the tip (analogous to Rtip)
         presweep : array_like, optional (m)
             location of blade pitch axis in y-direction of :ref:`blade coordinate system <azimuth_blade_coord>`
+        presweepTip : float, optional (m)
+            location of blade pitch axis in y-direction at the tip (analogous to Rtip)
         tiploss : boolean, optional
             if True, include Prandtl tip loss model
         hubloss : boolean, optional
@@ -262,7 +266,7 @@ class CCBlade:
         iterRe : int, optional
             The number of iterations to use to converge Reynolds number.  Generally iterRe=1 is sufficient,
             but for high accuracy in Reynolds number effects, iterRe=2 iterations can be used.  More than that
-            should not be necessary.
+            should not be necessary.  Gradients have only been implemented for the case iterRe=1.
         derivatives : boolean, optional
             if True, derivatives along with function values will be returned for the various methods
 
@@ -506,16 +510,20 @@ class CCBlade:
             force per unit length normal to the section on downwind side
         Tp : ndarray (N/m)
             force per unit length tangential to the section in the direction of rotation
-        dNp_dx, dTp_dx : ndarray, shape=(14, n), (present if ``self.derivatives = True``)
-            derivatives of normal and tangential loads
-            ``dNp_dx[i, j] = dNp_j/dx_i`` where x = [r_j, chord_j, theta_j, Rhub, Rtip, presweep_j, precone_j, tilt, hubHt, yaw, azimuth, Uinf, Omega, pitch]
-            for example, ``dNp_dx[4, j] = dNp_j/dRtip``.
-            For vector quantities all off-diagonal terms are zero (i.e., dNp_j/dchord_i = 0 for  i != j)
-            and thus not included.  (``dNp_dx[0, j] = dNp_j/dr_j``)
-        dNp_dprecurve, dTp_dprecurve : ndarray, shape=(n, n), (present if ``self.derivatives = True``)
-            derivatives of normal loads w.r.t. precurve.
-            dNp_dprecurve[i, j] = dNp_i/dprecurve_j
-            all entries are returned because precurve affects the local slope of the neighboring locations (tri-diagonal matrix)
+        dNp : dictionary containing arrays (present if ``self.derivatives = True``)
+            derivatives of normal loads.  Each item in the dictionary a 2D Jacobian.
+            The array sizes and keys are (where n = number of stations along blade):
+
+            n x n (diagonal): 'dr', 'dchord', 'dtheta', 'dpresweep'
+
+            n x n (tridiagonal): 'dprecurve'
+
+            n x 1: 'dRhub', 'dRtip', 'dprecone', 'dtilt', 'dhubHt', 'dyaw', 'dazimuth', 'dUinf', 'dOmega', 'dpitch'
+
+            for example dNp_dr = dNp['dr']  (where dNp_dr is an n x n array)
+            and dNp_dr[i, j] = dNp_i / dr_j
+        dTp : dictionary (present if ``self.derivatives = True``)
+            derivatives of tangential loads.  Same keys as dNp.
         """
 
         self.pitch = radians(pitch)
@@ -637,7 +645,54 @@ class CCBlade:
             dNp_dX[ridx, :] *= pi/180.0
             dTp_dX[ridx, :] *= pi/180.0
 
-            return Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve
+            # save these values as the packing in one matrix is convenient for evaluate
+            # (intended for internal use only.  not to be accessed by user)
+            self._dNp_dX = dNp_dX
+            self._dTp_dX = dTp_dX
+            self._dNp_dprecurve = dNp_dprecurve
+            self._dTp_dprecurve = dTp_dprecurve
+
+            # pack derivatives into dictionary
+            dNp = {}
+            dTp = {}
+
+            # n x n (diagonal)
+            dNp['dr'] = np.diag(dNp_dX[0, :])
+            dTp['dr'] = np.diag(dTp_dX[0, :])
+            dNp['dchord'] = np.diag(dNp_dX[1, :])
+            dTp['dchord'] = np.diag(dTp_dX[1, :])
+            dNp['dtheta'] = np.diag(dNp_dX[2, :])
+            dTp['dtheta'] = np.diag(dTp_dX[2, :])
+            dNp['dpresweep'] = np.diag(dNp_dX[5, :])
+            dTp['dpresweep'] = np.diag(dTp_dX[5, :])
+
+            # n x n (tridiagonal)
+            dNp['dprecurve'] = dNp_dprecurve.T
+            dTp['dprecurve'] = dTp_dprecurve.T
+
+            # n x 1
+            dNp['dRhub'] = dNp_dX[3, :].reshape(n, 1)
+            dTp['dRhub'] = dTp_dX[3, :].reshape(n, 1)
+            dNp['dRtip'] = dNp_dX[4, :].reshape(n, 1)
+            dTp['dRtip'] = dTp_dX[4, :].reshape(n, 1)
+            dNp['dprecone'] = dNp_dX[6, :].reshape(n, 1)
+            dTp['dprecone'] = dTp_dX[6, :].reshape(n, 1)
+            dNp['dtilt'] = dNp_dX[7, :].reshape(n, 1)
+            dTp['dtilt'] = dTp_dX[7, :].reshape(n, 1)
+            dNp['dhubHt'] = dNp_dX[8, :].reshape(n, 1)
+            dTp['dhubHt'] = dTp_dX[8, :].reshape(n, 1)
+            dNp['dyaw'] = dNp_dX[9, :].reshape(n, 1)
+            dTp['dyaw'] = dTp_dX[9, :].reshape(n, 1)
+            dNp['dazimuth'] = dNp_dX[10, :].reshape(n, 1)
+            dTp['dazimuth'] = dTp_dX[10, :].reshape(n, 1)
+            dNp['dUinf'] = dNp_dX[11, :].reshape(n, 1)
+            dTp['dUinf'] = dTp_dX[11, :].reshape(n, 1)
+            dNp['dOmega'] = dNp_dX[12, :].reshape(n, 1)
+            dTp['dOmega'] = dTp_dX[12, :].reshape(n, 1)
+            dNp['dpitch'] = dNp_dX[13, :].reshape(n, 1)
+            dTp['dpitch'] = dTp_dX[13, :].reshape(n, 1)
+
+            return Np, Tp, dNp, dTp
 
 
 
@@ -664,24 +719,25 @@ class CCBlade:
             thrust or thrust coefficient (magnitude)
         Q or CQ : ndarray (N*m)
             torque or torque coefficient (magnitude)
-        dP_ds or dCP_ds : ndarray, shape=(npts, 11)
-            derivative of power or power coefficient w.r.t. scalar quantities
-            thus dP_ds[i, 4] = dP_dRtip for input condition i
-        dT_ds or dCT_ds : ndarray, shape=(npts, 11)
-            derivative of thrust or thrust coefficient w.r.t. scalar quantities
-            thus dT_ds[i, 4] = dT_dRtip for input condition i
-        dQ_ds or dCQ_ds : ndarray, shape=(npts, 11)
-            derivative of torque or torque coefficient w.r.t. scalar quantities
-            thus dQ_ds[i, 4] = dQ_dRtip for input condition i
-        dP_dv or dCP_dv : ndarray, shape=(npts, 5, n)
-            derivative of power or power coefficient w.r.t. vector quantities
-            thus dP_dv[i, 1, j] = dP_dchord_j for input condition i
-        dT_dv or dCT_dv : ndarray, shape=(npts, 5, n)
-            derivative of thrust or thrust coefficient w.r.t. vector quantities
-            thus dT_dv[i, 1, j] = dT_dchord_j for input condition i
-        dQ_dv or dCQ_dv : ndarray, shape=(npts, 5, n)
-            derivative of torque or torque coefficient w.r.t. vector quantities
-            thus dQ_dv[i, 1, j] = dQ_dchord_j for input condition i
+        dP or dCP : dictionary of arrays (present only if derivatives==True)
+            derivatives of power or power coefficient.  Each item in dictionary is a Jacobian.
+            The array sizes and keys are below
+            npts is the number of conditions (len(Uinf)),
+            n = number of stations along blade (len(r))
+
+            npts x 1: 'dprecone', 'dtilt', 'dhubHt', 'dRhub', 'dRtip', 'dprecurveTip', 'dpresweepTip', 'dyaw'
+
+            npts x npts: 'dUinf', 'dOmega', 'dpitch'
+
+            npts x n: 'dr', 'dchord', 'dtheta', 'dprecurve', 'dpresweep'
+
+            for example dP_dr = dP['dr']  (where dP_dr is an npts x n array)
+            and dP_dr[i, j] = dP_i / dr_j
+        dT or dCT : dictionary of arrays (present only if derivatives==True)
+            derivative of thrust or thrust coefficient.  Same format as dP and dCP
+        dQ or dCQ : dictionary of arrays (present only if derivatives==True)
+            derivative of torque or torque coefficient.  Same format as dP and dCP
+
 
         Notes
         -----
@@ -694,11 +750,6 @@ class CCBlade:
 
         The rotor radius R, may not actually be Rtip if precone and precurve are both nonzero
         ``R = Rtip*cos(precone) + precurveTip*sin(precone)``
-
-        order of scalar quantities is: s = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip, yaw, Uinf, Omega, pitch]
-
-        order of vector quantities is: v = [r, chord, theta, precurve, presweep]
-
 
         """
 
@@ -734,11 +785,10 @@ class CCBlade:
 
                 else:
 
-                    Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve = \
-                        self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                    Np, Tp, dNp, dTp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
 
-                    dT_ds_sub, dQ_ds_sub, dT_dv_sub, dQ_dv_sub = \
-                        self.__thrustTorqueDeriv(Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve, *args)
+                    dT_ds_sub, dQ_ds_sub, dT_dv_sub, dQ_dv_sub = self.__thrustTorqueDeriv(
+                        Np, Tp, self._dNp_dX, self._dTp_dX, self._dNp_dprecurve, self._dTp_dprecurve, *args)
 
                     dT_ds[i, :] += self.B * dT_ds_sub / nsec
                     dQ_ds[i, :] += self.B * dQ_ds_sub / nsec
@@ -773,13 +823,13 @@ class CCBlade:
 
                 dA_ds = 2*pi*self.rotorR*dR_ds
 
-                dU_ds = np.zeros((11, 11))
+                dU_ds = np.zeros((npts, 11))
                 dU_ds[:, 8] = 1.0
 
-                dOmega_ds = np.zeros((11, 11))
+                dOmega_ds = np.zeros((npts, 11))
                 dOmega_ds[:, 9] = 1.0
 
-                dq_ds = self.rho*Uinf*dU_ds
+                dq_ds = (self.rho*Uinf*dU_ds.T).T
 
                 dCT_ds = (CT * (dT_ds.T/T - dA_ds.T/A - dq_ds.T/q)).T
                 dCT_dv = (dT_dv.T / (q*A)).T
@@ -790,7 +840,10 @@ class CCBlade:
                 dCP_ds = (CP * (dQ_ds.T/Q + dOmega_ds.T/Omega - dA_ds.T/A - dq_ds.T/q - dU_ds.T/Uinf)).T
                 dCP_dv = (dQ_dv.T * CP/Q).T
 
-                return CP, CT, CQ, dCP_ds, dCT_ds, dCQ_ds, dCP_dv, dCT_dv, dCQ_dv
+                # pack derivatives into dictionary
+                dCT, dCQ, dCP = self.__thrustTorqueDictionary(dCT_ds, dCQ_ds, dCP_ds, dCT_dv, dCQ_dv, dCP_dv, npts)
+
+                return CP, CT, CQ, dCP, dCT, dCQ
 
             else:
                 return CP, CT, CQ
@@ -804,7 +857,10 @@ class CCBlade:
             dP_ds[:, 9] += Q*pi/30.0
             dP_dv = (dQ_dv.T * Omega*pi/30.0).T
 
-            return P, T, Q, dP_ds, dT_ds, dQ_ds, dP_dv, dT_dv, dQ_dv
+            # pack derivatives into dictionary
+            dT, dQ, dP = self.__thrustTorqueDictionary(dT_ds, dQ_ds, dP_ds, dT_dv, dQ_dv, dP_dv, npts)
+
+            return P, T, Q, dP, dT, dQ
 
         else:
             return P, T, Q
@@ -881,6 +937,71 @@ class CCBlade:
 
 
 
+    def __thrustTorqueDictionary(self, dT_ds, dQ_ds, dP_ds, dT_dv, dQ_dv, dP_dv, npts):
+
+        # pack derivatives into dictionary
+        dT = {}
+        dQ = {}
+        dP = {}
+
+        # npts x 1
+        dT['dprecone'] = dT_ds[:, 0].reshape(npts, 1)
+        dQ['dprecone'] = dQ_ds[:, 0].reshape(npts, 1)
+        dP['dprecone'] = dP_ds[:, 0].reshape(npts, 1)
+        dT['dtilt'] = dT_ds[:, 1].reshape(npts, 1)
+        dQ['dtilt'] = dQ_ds[:, 1].reshape(npts, 1)
+        dP['dtilt'] = dP_ds[:, 1].reshape(npts, 1)
+        dT['dhubHt'] = dT_ds[:, 2].reshape(npts, 1)
+        dQ['dhubHt'] = dQ_ds[:, 2].reshape(npts, 1)
+        dP['dhubHt'] = dP_ds[:, 2].reshape(npts, 1)
+        dT['dRhub'] = dT_ds[:, 3].reshape(npts, 1)
+        dQ['dRhub'] = dQ_ds[:, 3].reshape(npts, 1)
+        dP['dRhub'] = dP_ds[:, 3].reshape(npts, 1)
+        dT['dRtip'] = dT_ds[:, 4].reshape(npts, 1)
+        dQ['dRtip'] = dQ_ds[:, 4].reshape(npts, 1)
+        dP['dRtip'] = dP_ds[:, 4].reshape(npts, 1)
+        dT['dprecurveTip'] = dT_ds[:, 5].reshape(npts, 1)
+        dQ['dprecurveTip'] = dQ_ds[:, 5].reshape(npts, 1)
+        dP['dprecurveTip'] = dP_ds[:, 5].reshape(npts, 1)
+        dT['dpresweepTip'] = dT_ds[:, 6].reshape(npts, 1)
+        dQ['dpresweepTip'] = dQ_ds[:, 6].reshape(npts, 1)
+        dP['dpresweepTip'] = dP_ds[:, 6].reshape(npts, 1)
+        dT['dyaw'] = dT_ds[:, 7].reshape(npts, 1)
+        dQ['dyaw'] = dQ_ds[:, 7].reshape(npts, 1)
+        dP['dyaw'] = dP_ds[:, 7].reshape(npts, 1)
+
+
+        # npts x npts (diagonal)
+        dT['dUinf'] = np.diag(dT_ds[:, 8])
+        dQ['dUinf'] = np.diag(dQ_ds[:, 8])
+        dP['dUinf'] = np.diag(dP_ds[:, 8])
+        dT['dOmega'] = np.diag(dT_ds[:, 9])
+        dQ['dOmega'] = np.diag(dQ_ds[:, 9])
+        dP['dOmega'] = np.diag(dP_ds[:, 9])
+        dT['dpitch'] = np.diag(dT_ds[:, 10])
+        dQ['dpitch'] = np.diag(dQ_ds[:, 10])
+        dP['dpitch'] = np.diag(dP_ds[:, 10])
+
+
+        # npts x n
+        dT['dr'] = dT_dv[:, 0, :]
+        dQ['dr'] = dQ_dv[:, 0, :]
+        dP['dr'] = dP_dv[:, 0, :]
+        dT['dchord'] = dT_dv[:, 1, :]
+        dQ['dchord'] = dQ_dv[:, 1, :]
+        dP['dchord'] = dP_dv[:, 1, :]
+        dT['dtheta'] = dT_dv[:, 2, :]
+        dQ['dtheta'] = dQ_dv[:, 2, :]
+        dP['dtheta'] = dP_dv[:, 2, :]
+        dT['dprecurve'] = dT_dv[:, 3, :]
+        dQ['dprecurve'] = dQ_dv[:, 3, :]
+        dP['dprecurve'] = dP_dv[:, 3, :]
+        dT['dpresweep'] = dT_dv[:, 4, :]
+        dQ['dpresweep'] = dQ_dv[:, 4, :]
+        dP['dpresweep'] = dP_dv[:, 4, :]
+
+        return dT, dQ, dP
+
 
 if __name__ == '__main__':
 
@@ -944,7 +1065,7 @@ if __name__ == '__main__':
     azimuth = 90
 
     # evaluate distributed loads
-    Np, Tp = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+    Np, Tp= aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
 
 

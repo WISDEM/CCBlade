@@ -94,26 +94,31 @@ azimuth = 0.0
 
 # 5 ----------
 
-Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve = \
-    rotor.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+Np, Tp, dNp, dTp \
+    = rotor.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
-# X = [r, chord, theta, Rhub, Rtip, presweep, precone,
-#      tilt, hubHt, yaw, azimuth, Uinf, Omega, pitch]
+n = len(r)
 
-dNp_dr = dNp_dX[0, :]
-dNp_dchord = dNp_dX[1, :]
-dNp_dtheta = dNp_dX[2, :]
-dNp_dRhub = dNp_dX[3, :]
-dNp_dRtip = dNp_dX[4, :]
-dNp_dpresweep = dNp_dX[5, :]
-dNp_dprecone = dNp_dX[6, :]
-dNp_dtilt = dNp_dX[7, :]
-dNp_dhubHt = dNp_dX[8, :]
-dNp_dyaw = dNp_dX[9, :]
-dNp_dazimuth = dNp_dX[10, :]
-dNp_dUinf = dNp_dX[11, :]
-dNp_dOmega = dNp_dX[12, :]
-dNp_dpitch = dNp_dX[13, :]
+# n x n (diagonal)
+dNp_dr = dNp['dr']
+dNp_dchord = dNp['dchord']
+dNp_dtheta = dNp['dtheta']
+dNp_dpresweep = dNp['dpresweep']
+
+# n x n (tridiagonal)
+dNp_dprecurve = dNp['dprecurve']
+
+# n x 1
+dNp_dRhub = dNp['dRhub']
+dNp_dRtip = dNp['dRtip']
+dNp_dprecone = dNp['dprecone']
+dNp_dtilt = dNp['dtilt']
+dNp_dhubHt = dNp['dhubHt']
+dNp_dyaw = dNp['dyaw']
+dNp_dazimuth = dNp['dazimuth']
+dNp_dUinf = dNp['dUinf']
+dNp_dOmega = dNp['dOmega']
+dNp_dpitch = dNp['dpitch']
 
 # 5 ----------
 
@@ -121,26 +126,32 @@ dNp_dpitch = dNp_dX[13, :]
 # 6 ----------
 
 
-P, T, Q, dP_ds, dT_ds, dQ_ds, dP_dv, dT_dv, dQ_dv = \
-    rotor.evaluate([Uinf], [Omega], [pitch])
+P, T, Q, dP, dT, dQ \
+    = rotor.evaluate([Uinf], [Omega], [pitch])
 
-# scalars = [precone, tilt, hubHt, Rhub, Rtip,
-#            precurvetip, presweeptip, yaw,
-#            Uinf, Omega, pitch]
-# vectors = [r, chord, theta, precurve, presweep]
+npts = len(P)
 
-# unpack scalar derivatives
-dP_dprecone, dP_dtilt, dP_dhubHt, dP_dRhub, dP_dRtip, \
-    dP_dprecurvetip, dP_dpresweeptip, dP_dyaw, \
-    dP_dUinf, dP_dOmega, dP_dpitch = dP_ds[0, :]
+# npts x 1
+dP_dprecone = dP['dprecone']
+dP_dtilt = dP['dtilt']
+dP_dhubHt = dP['dhubHt']
+dP_dRhub = dP['dRhub']
+dP_dRtip = dP['dRtip']
+dP_dprecurveTip = dP['dprecurveTip']
+dP_dpresweepTip = dP['dpresweepTip']
+dP_dyaw = dP['dyaw']
 
-# unpack vector derivatives
-dP_dr = dP_dv[0, 0, :]
-dP_dchord = dP_dv[0, 1, :]
-dP_dtheta = dP_dv[0, 2, :]
-dP_dprecurve = dP_dv[0, 3, :]
-dP_dpresweep = dP_dv[0, 4, :]
+# npts x npts
+dP_dUinf = dP['dUinf']
+dP_dOmega = dP['dOmega']
+dP_dpitch = dP['dpitch']
 
+# npts x n
+dP_dr = dP['dr']
+dP_dchord = dP['dchord']
+dP_dtheta = dP['dtheta']
+dP_dprecurve = dP['dprecurve']
+dP_dpresweep = dP['dpresweep']
 
 
 # 6 ----------
@@ -163,7 +174,7 @@ Npd, Tpd = rotor_fd.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 dNp_dr_fd = (Npd - Np) / delta
 dTp_dr_fd = (Tpd - Tp) / delta
 
-print '(analytic) dNp_i/dr_i =', dNp_dr[idx]
+print '(analytic) dNp_i/dr_i =', dNp_dr[idx, idx]
 print '(fin diff) dNp_i/dr_i =', dNp_dr_fd[idx]
 print
 # 7 ----------
@@ -185,7 +196,7 @@ dT_dprecone_fd = (Td - T) / delta
 dQ_dprecone_fd = (Qd - Q) / delta
 dP_dprecone_fd = (Pd - P) / delta
 
-print '(analytic) dP/dprecone =', dP_dprecone
+print '(analytic) dP/dprecone =', dP_dprecone[0, 0]
 print '(fin diff) dP/dprecone =', dP_dprecone_fd[0]
 print
 # 8 ----------
@@ -208,7 +219,7 @@ dT_dr_fd = (Td - T) / delta
 dQ_dr_fd = (Qd - Q) / delta
 dP_dr_fd = (Pd - P) / delta
 
-print '(analytic) dP/dr_i =', dP_dr[idx]
+print '(analytic) dP/dr_i =', dP_dr[0, idx]
 print '(fin diff) dP/dr_i =', dP_dr_fd[0]
 print
 # 9 ----------

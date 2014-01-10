@@ -1,5 +1,24 @@
 # CCBlade Changelog
 
+## 1.1.0 (Jan 10, 2013)
+
+Andrew Ning <andrew.ning@nrel.gov>
+
+[NEW]:
+
+- added the remaining analytic gradients I didn't think I would need (yaw, azimuth, Uinf, Omega, pitch)
+- added analytic gradients for parked cases (Omega==0)
+- additional unit tests for the new gradients
+
+[CHANGE]:
+
+- gradients are now returned as a dictionary, and full Jacobians are returned.  This makes it much easier to access the gradients, because you don't have to worry about what the ordering is.  Also returning 2D arrays for every value maintains consistency so you don't have to remember which gradients were really just the nonzero diagonal entries of the corresponding Jacobian.  However, this makes the API not backwards compatible.  I apologize if it causes a lot of changes on your end.
+- AirfoilPrep.py was moved to a separate repository (https://github.com/NREL-WISDEM/AirfoilPreppy) to more easily accommodate changes and contributions.  The setup.py script should still install from the repository automatically.  For some reason the setup script throws an error saying it could not find AirfoilPrep however it does find it and installs properly.
+
+[FIX]:
+
+- As compared to what I wrote in the docstring, I was returning the transpose of dNp_dprecurve, dTp_dprecurve, dNp_dpresweep, and dTp_dpresweep.  This is now fixed.
+
 ## 1.0.2 (Nov 21, 2013)
 
 Andrew Ning <andrew.ning@nrel.gov>
