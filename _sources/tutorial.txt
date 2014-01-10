@@ -131,15 +131,13 @@ CCBlade optinally provides analytic gradients of every output with respect to al
     :start-after: # 3 ---
     :end-before: # 3 ---
 
-Now when we ask for the distributed loads, we also get the gradients.  The gradients are returned as a 2D array and unpacked as follows.
+Now when we ask for the distributed loads, we also get the gradients.  The gradients are returned as a dictionary containing 2D arrays.  These can be accessed as follows:
 
 .. literalinclude:: examples/gradients.py
     :start-after: # 5 ---
     :end-before: # 5 ---
 
-For each vector variable (with the exception of precurve) a change in the local quantity affects only the local normal load.  In other words: :math:`dNp_i/dr_j = 0 \text{ for all } i \neq j`.  Thus only the diagonal terms are returned in a 1D vector (``dNp_dr[3] =`` :math:`dNp_3 / dr_3`).  Precurve affects the sections adjacent to it, so the returned matrix is tridiagonal.
-
-We can compare against finite differencing as follows (with a randomly chosen station along the blade):
+Even though many of the matrices are diagonal, the full Jacobian is returned for consistency.  We can compare against finite differencing as follows (with a randomly chosen station along the blade):
 
 .. literalinclude:: examples/gradients.py
     :start-after: # 7 ---
@@ -150,7 +148,7 @@ The output is:
 >>> (analytic) dNp_i/dr_i = 107.680395098
 >>> (fin diff) dNp_i/dr_i = 107.680370762
 
-Similarly, when we compute thrust, torque, and power we also get the gradients (for either the nondimensional or dimensional form).  The gradients are returned as a multidimensional arrays.  The first index corresponds to the different input cases.  In the following example, we use only one input case (Uinf is a 1D array) so the first index is 0.  The derivatives with respect to scalar quantities and with respect to vector quantities are returned separately.
+Similarly, when we compute thrust, torque, and power we also get the gradients (for either the nondimensional or dimensional form).  The gradients are also returned as a dictionary containing 2D Jacobians.
 
 .. literalinclude:: examples/gradients.py
     :start-after: # 6 ---
@@ -174,3 +172,5 @@ Finally, we compare the derivative of power against finite differencing for one 
 
 >>> (analytic) dP/dr_i = 848.368037506
 >>> (fin diff) dP/dr_i = 848.355994992
+
+For more comprehensive comparison to finite differencing, see the unit tests contained in test/test_gradients.py.

@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ccblade.CCBlade.evaluate &mdash; CCBlade 1.0.5 documentation</title>
+    <title>ccblade.CCBlade.evaluate &mdash; CCBlade 1.1.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/nrel.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.5',
+        VERSION:     '1.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="CCBlade 1.0.5 documentation" href="../index.html" /> 
+    <link rel="top" title="CCBlade 1.1.0 documentation" href="../index.html" /> 
   </head>
   <body>
     <div class="related">
@@ -33,7 +33,7 @@
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
-        <li><a href="../index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -82,35 +82,25 @@
 <blockquote>
 <div><p>torque or torque coefficient (magnitude)</p>
 </div></blockquote>
-<p><strong>dP_ds or dCP_ds</strong> : ndarray, shape=(npts, 11)</p>
+<p><strong>dP or dCP</strong> : dictionary of arrays (present only if derivatives==True)</p>
 <blockquote>
-<div><p>derivative of power or power coefficient w.r.t. scalar quantities
-thus dP_ds[i, 4] = dP_dRtip for input condition i</p>
+<div><p>derivatives of power or power coefficient.  Each item in dictionary is a Jacobian.
+The array sizes and keys are below
+npts is the number of conditions (len(Uinf)),
+n = number of stations along blade (len(r))</p>
+<p>npts x 1: &#8216;dprecone&#8217;, &#8216;dtilt&#8217;, &#8216;dhubHt&#8217;, &#8216;dRhub&#8217;, &#8216;dRtip&#8217;, &#8216;dprecurveTip&#8217;, &#8216;dpresweepTip&#8217;, &#8216;dyaw&#8217;</p>
+<p>npts x npts: &#8216;dUinf&#8217;, &#8216;dOmega&#8217;, &#8216;dpitch&#8217;</p>
+<p>npts x n: &#8216;dr&#8217;, &#8216;dchord&#8217;, &#8216;dtheta&#8217;, &#8216;dprecurve&#8217;, &#8216;dpresweep&#8217;</p>
+<p>for example dP_dr = dP[&#8216;dr&#8217;]  (where dP_dr is an npts x n array)
+and dP_dr[i, j] = dP_i / dr_j</p>
 </div></blockquote>
-<p><strong>dT_ds or dCT_ds</strong> : ndarray, shape=(npts, 11)</p>
+<p><strong>dT or dCT</strong> : dictionary of arrays (present only if derivatives==True)</p>
 <blockquote>
-<div><p>derivative of thrust or thrust coefficient w.r.t. scalar quantities
-thus dT_ds[i, 4] = dT_dRtip for input condition i</p>
+<div><p>derivative of thrust or thrust coefficient.  Same format as dP and dCP</p>
 </div></blockquote>
-<p><strong>dQ_ds or dCQ_ds</strong> : ndarray, shape=(npts, 11)</p>
-<blockquote>
-<div><p>derivative of torque or torque coefficient w.r.t. scalar quantities
-thus dQ_ds[i, 4] = dQ_dRtip for input condition i</p>
-</div></blockquote>
-<p><strong>dP_dv or dCP_dv</strong> : ndarray, shape=(npts, 5, n)</p>
-<blockquote>
-<div><p>derivative of power or power coefficient w.r.t. vector quantities
-thus dP_dv[i, 1, j] = dP_dchord_j for input condition i</p>
-</div></blockquote>
-<p><strong>dT_dv or dCT_dv</strong> : ndarray, shape=(npts, 5, n)</p>
-<blockquote>
-<div><p>derivative of thrust or thrust coefficient w.r.t. vector quantities
-thus dT_dv[i, 1, j] = dT_dchord_j for input condition i</p>
-</div></blockquote>
-<p><strong>dQ_dv or dCQ_dv</strong> : ndarray, shape=(npts, 5, n)</p>
+<p><strong>dQ or dCQ</strong> : dictionary of arrays (present only if derivatives==True)</p>
 <blockquote class="last">
-<div><p>derivative of torque or torque coefficient w.r.t. vector quantities
-thus dQ_dv[i, 1, j] = dQ_dchord_j for input condition i</p>
+<div><p>derivative of torque or torque coefficient.  Same format as dP and dCP</p>
 </div></blockquote>
 </td>
 </tr>
@@ -122,8 +112,6 @@ thus dQ_dv[i, 1, j] = dQ_dchord_j for input condition i</p>
 <p>CQ = Q / (q * A * R)</p>
 <p>The rotor radius R, may not actually be Rtip if precone and precurve are both nonzero
 <tt class="docutils literal"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">Rtip*cos(precone)</span> <span class="pre">+</span> <span class="pre">precurveTip*sin(precone)</span></tt></p>
-<p>order of scalar quantities is: s = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip, yaw, Uinf, Omega, pitch]</p>
-<p>order of vector quantities is: v = [r, chord, theta, precurve, presweep]</p>
 </dd></dl>
 
 </div>
@@ -162,12 +150,12 @@ thus dQ_dv[i, 1, j] = dQ_dchord_j for input condition i</p>
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              >index</a></li>
-        <li><a href="../index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, NREL.
-      Last updated on Jan 08, 2014.
+      Last updated on Jan 10, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
     </div>
   </body>

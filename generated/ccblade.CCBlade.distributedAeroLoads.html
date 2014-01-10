@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>ccblade.CCBlade.distributedAeroLoads &mdash; CCBlade 1.0.5 documentation</title>
+    <title>ccblade.CCBlade.distributedAeroLoads &mdash; CCBlade 1.1.0 documentation</title>
     
     <link rel="stylesheet" href="../_static/nrel.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    '../',
-        VERSION:     '1.0.5',
+        VERSION:     '1.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="CCBlade 1.0.5 documentation" href="../index.html" /> 
+    <link rel="top" title="CCBlade 1.1.0 documentation" href="../index.html" /> 
   </head>
   <body>
     <div class="related">
@@ -33,7 +33,7 @@
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
-        <li><a href="../index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -81,19 +81,19 @@ behind tower shadow for example).  In either case shear corrections will be appl
 <blockquote>
 <div><p>force per unit length tangential to the section in the direction of rotation</p>
 </div></blockquote>
-<p><strong>dNp_dx, dTp_dx</strong> : ndarray, shape=(14, n), (present if <tt class="docutils literal"><span class="pre">self.derivatives</span> <span class="pre">=</span> <span class="pre">True</span></tt>)</p>
+<p><strong>dNp</strong> : dictionary containing arrays (present if <tt class="docutils literal"><span class="pre">self.derivatives</span> <span class="pre">=</span> <span class="pre">True</span></tt>)</p>
 <blockquote>
-<div><p>derivatives of normal and tangential loads
-<tt class="docutils literal"><span class="pre">dNp_dx[i,</span> <span class="pre">j]</span> <span class="pre">=</span> <span class="pre">dNp_j/dx_i</span></tt> where x = [r_j, chord_j, theta_j, Rhub, Rtip, presweep_j, precone_j, tilt, hubHt, yaw, azimuth, Uinf, Omega, pitch]
-for example, <tt class="docutils literal"><span class="pre">dNp_dx[4,</span> <span class="pre">j]</span> <span class="pre">=</span> <span class="pre">dNp_j/dRtip</span></tt>.
-For vector quantities all off-diagonal terms are zero (i.e., dNp_j/dchord_i = 0 for  i != j)
-and thus not included.  (<tt class="docutils literal"><span class="pre">dNp_dx[0,</span> <span class="pre">j]</span> <span class="pre">=</span> <span class="pre">dNp_j/dr_j</span></tt>)</p>
+<div><p>derivatives of normal loads.  Each item in the dictionary a 2D Jacobian.
+The array sizes and keys are (where n = number of stations along blade):</p>
+<p>n x n (diagonal): &#8216;dr&#8217;, &#8216;dchord&#8217;, &#8216;dtheta&#8217;, &#8216;dpresweep&#8217;</p>
+<p>n x n (tridiagonal): &#8216;dprecurve&#8217;</p>
+<p>n x 1: &#8216;dRhub&#8217;, &#8216;dRtip&#8217;, &#8216;dprecone&#8217;, &#8216;dtilt&#8217;, &#8216;dhubHt&#8217;, &#8216;dyaw&#8217;, &#8216;dazimuth&#8217;, &#8216;dUinf&#8217;, &#8216;dOmega&#8217;, &#8216;dpitch&#8217;</p>
+<p>for example dNp_dr = dNp[&#8216;dr&#8217;]  (where dNp_dr is an n x n array)
+and dNp_dr[i, j] = dNp_i / dr_j</p>
 </div></blockquote>
-<p><strong>dNp_dprecurve, dTp_dprecurve</strong> : ndarray, shape=(n, n), (present if <tt class="docutils literal"><span class="pre">self.derivatives</span> <span class="pre">=</span> <span class="pre">True</span></tt>)</p>
+<p><strong>dTp</strong> : dictionary (present if <tt class="docutils literal"><span class="pre">self.derivatives</span> <span class="pre">=</span> <span class="pre">True</span></tt>)</p>
 <blockquote class="last">
-<div><p>derivatives of normal loads w.r.t. precurve.
-dNp_dprecurve[i, j] = dNp_i/dprecurve_j
-all entries are returned because precurve affects the local slope of the neighboring locations (tri-diagonal matrix)</p>
+<div><p>derivatives of tangential loads.  Same keys as dNp.</p>
 </div></blockquote>
 </td>
 </tr>
@@ -137,12 +137,12 @@ all entries are returned because precurve affects the local slope of the neighbo
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              >index</a></li>
-        <li><a href="../index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
+        <li><a href="../index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, NREL.
-      Last updated on Jan 08, 2014.
+      Last updated on Jan 10, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
     </div>
   </body>

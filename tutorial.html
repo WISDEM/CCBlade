@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>3. Tutorial &mdash; CCBlade 1.0.5 documentation</title>
+    <title>3. Tutorial &mdash; CCBlade 1.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/nrel.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0.5',
+        VERSION:     '1.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="CCBlade 1.0.5 documentation" href="index.html" />
+    <link rel="top" title="CCBlade 1.1.0 documentation" href="index.html" />
     <link rel="next" title="4. Module Documentation" href="documentation.html" />
     <link rel="prev" title="2. Installation" href="installation.html" /> 
   </head>
@@ -41,7 +41,7 @@
         <li class="right" >
           <a href="installation.html" title="2. Installation"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -228,31 +228,35 @@
                 <span class="n">precone</span><span class="p">,</span> <span class="n">tilt</span><span class="p">,</span> <span class="n">yaw</span><span class="p">,</span> <span class="n">shearExp</span><span class="p">,</span> <span class="n">hubHt</span><span class="p">,</span> <span class="n">nSector</span><span class="p">,</span> <span class="n">derivatives</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
 </pre></div>
 </div>
-<p>Now when we ask for the distributed loads, we also get the gradients.  The gradients are returned as a 2D array and unpacked as follows.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">Np</span><span class="p">,</span> <span class="n">Tp</span><span class="p">,</span> <span class="n">dNp_dX</span><span class="p">,</span> <span class="n">dTp_dX</span><span class="p">,</span> <span class="n">dNp_dprecurve</span><span class="p">,</span> <span class="n">dTp_dprecurve</span> <span class="o">=</span> \
-    <span class="n">rotor</span><span class="o">.</span><span class="n">distributedAeroLoads</span><span class="p">(</span><span class="n">Uinf</span><span class="p">,</span> <span class="n">Omega</span><span class="p">,</span> <span class="n">pitch</span><span class="p">,</span> <span class="n">azimuth</span><span class="p">)</span>
+<p>Now when we ask for the distributed loads, we also get the gradients.  The gradients are returned as a dictionary containing 2D arrays.  These can be accessed as follows:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">Np</span><span class="p">,</span> <span class="n">Tp</span><span class="p">,</span> <span class="n">dNp</span><span class="p">,</span> <span class="n">dTp</span> \
+    <span class="o">=</span> <span class="n">rotor</span><span class="o">.</span><span class="n">distributedAeroLoads</span><span class="p">(</span><span class="n">Uinf</span><span class="p">,</span> <span class="n">Omega</span><span class="p">,</span> <span class="n">pitch</span><span class="p">,</span> <span class="n">azimuth</span><span class="p">)</span>
 
-<span class="c"># X = [r, chord, theta, Rhub, Rtip, presweep, precone,</span>
-<span class="c">#      tilt, hubHt, yaw, azimuth, Uinf, Omega, pitch]</span>
+<span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">r</span><span class="p">)</span>
 
-<span class="n">dNp_dr</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dchord</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dtheta</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dRhub</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dRtip</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dpresweep</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dprecone</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">6</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dtilt</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dhubHt</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">8</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dyaw</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">9</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dazimuth</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">10</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dUinf</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">11</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dOmega</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">12</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dNp_dpitch</span> <span class="o">=</span> <span class="n">dNp_dX</span><span class="p">[</span><span class="mi">13</span><span class="p">,</span> <span class="p">:]</span>
+<span class="c"># n x n (diagonal)</span>
+<span class="n">dNp_dr</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dr&#39;</span><span class="p">]</span>
+<span class="n">dNp_dchord</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dchord&#39;</span><span class="p">]</span>
+<span class="n">dNp_dtheta</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dtheta&#39;</span><span class="p">]</span>
+<span class="n">dNp_dpresweep</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dpresweep&#39;</span><span class="p">]</span>
+
+<span class="c"># n x n (tridiagonal)</span>
+<span class="n">dNp_dprecurve</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dprecurve&#39;</span><span class="p">]</span>
+
+<span class="c"># n x 1</span>
+<span class="n">dNp_dRhub</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dRhub&#39;</span><span class="p">]</span>
+<span class="n">dNp_dRtip</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dRtip&#39;</span><span class="p">]</span>
+<span class="n">dNp_dprecone</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dprecone&#39;</span><span class="p">]</span>
+<span class="n">dNp_dtilt</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dtilt&#39;</span><span class="p">]</span>
+<span class="n">dNp_dhubHt</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dhubHt&#39;</span><span class="p">]</span>
+<span class="n">dNp_dyaw</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dyaw&#39;</span><span class="p">]</span>
+<span class="n">dNp_dazimuth</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dazimuth&#39;</span><span class="p">]</span>
+<span class="n">dNp_dUinf</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dUinf&#39;</span><span class="p">]</span>
+<span class="n">dNp_dOmega</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dOmega&#39;</span><span class="p">]</span>
+<span class="n">dNp_dpitch</span> <span class="o">=</span> <span class="n">dNp</span><span class="p">[</span><span class="s">&#39;dpitch&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
-<p>For each vector variable (with the exception of precurve) a change in the local quantity affects only the local normal load.  In other words: <span class="math">\(dNp_i/dr_j = 0 \text{ for all } i \neq j\)</span>.  Thus only the diagonal terms are returned in a 1D vector (<tt class="docutils literal"><span class="pre">dNp_dr[3]</span> <span class="pre">=</span></tt> <span class="math">\(dNp_3 / dr_3\)</span>).  Precurve affects the sections adjacent to it, so the returned matrix is tridiagonal.</p>
-<p>We can compare against finite differencing as follows (with a randomly chosen station along the blade):</p>
+<p>Even though many of the matrices are diagonal, the full Jacobian is returned for consistency.  We can compare against finite differencing as follows (with a randomly chosen station along the blade):</p>
 <div class="highlight-python"><div class="highlight"><pre><span class="n">idx</span> <span class="o">=</span> <span class="mi">8</span>
 <span class="n">delta</span> <span class="o">=</span> <span class="mf">1e-6</span><span class="o">*</span><span class="n">r</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
 <span class="n">r</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span> <span class="o">+=</span> <span class="n">delta</span>
@@ -267,7 +271,7 @@
 <span class="n">dNp_dr_fd</span> <span class="o">=</span> <span class="p">(</span><span class="n">Npd</span> <span class="o">-</span> <span class="n">Np</span><span class="p">)</span> <span class="o">/</span> <span class="n">delta</span>
 <span class="n">dTp_dr_fd</span> <span class="o">=</span> <span class="p">(</span><span class="n">Tpd</span> <span class="o">-</span> <span class="n">Tp</span><span class="p">)</span> <span class="o">/</span> <span class="n">delta</span>
 
-<span class="k">print</span> <span class="s">&#39;(analytic) dNp_i/dr_i =&#39;</span><span class="p">,</span> <span class="n">dNp_dr</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+<span class="k">print</span> <span class="s">&#39;(analytic) dNp_i/dr_i =&#39;</span><span class="p">,</span> <span class="n">dNp_dr</span><span class="p">[</span><span class="n">idx</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span>
 <span class="k">print</span> <span class="s">&#39;(fin diff) dNp_i/dr_i =&#39;</span><span class="p">,</span> <span class="n">dNp_dr_fd</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
 <span class="k">print</span>
 </pre></div>
@@ -277,26 +281,33 @@
 <span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">fin</span> <span class="n">diff</span><span class="p">)</span> <span class="n">dNp_i</span><span class="o">/</span><span class="n">dr_i</span> <span class="o">=</span> <span class="mf">107.680370762</span>
 </pre></div>
 </div>
-<p>Similarly, when we compute thrust, torque, and power we also get the gradients (for either the nondimensional or dimensional form).  The gradients are returned as a multidimensional arrays.  The first index corresponds to the different input cases.  In the following example, we use only one input case (Uinf is a 1D array) so the first index is 0.  The derivatives with respect to scalar quantities and with respect to vector quantities are returned separately.</p>
-<div class="highlight-python"><div class="highlight"><pre><span class="n">P</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">dP_ds</span><span class="p">,</span> <span class="n">dT_ds</span><span class="p">,</span> <span class="n">dQ_ds</span><span class="p">,</span> <span class="n">dP_dv</span><span class="p">,</span> <span class="n">dT_dv</span><span class="p">,</span> <span class="n">dQ_dv</span> <span class="o">=</span> \
-    <span class="n">rotor</span><span class="o">.</span><span class="n">evaluate</span><span class="p">([</span><span class="n">Uinf</span><span class="p">],</span> <span class="p">[</span><span class="n">Omega</span><span class="p">],</span> <span class="p">[</span><span class="n">pitch</span><span class="p">])</span>
+<p>Similarly, when we compute thrust, torque, and power we also get the gradients (for either the nondimensional or dimensional form).  The gradients are also returned as a dictionary containing 2D Jacobians.</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="n">P</span><span class="p">,</span> <span class="n">T</span><span class="p">,</span> <span class="n">Q</span><span class="p">,</span> <span class="n">dP</span><span class="p">,</span> <span class="n">dT</span><span class="p">,</span> <span class="n">dQ</span> \
+    <span class="o">=</span> <span class="n">rotor</span><span class="o">.</span><span class="n">evaluate</span><span class="p">([</span><span class="n">Uinf</span><span class="p">],</span> <span class="p">[</span><span class="n">Omega</span><span class="p">],</span> <span class="p">[</span><span class="n">pitch</span><span class="p">])</span>
 
-<span class="c"># scalars = [precone, tilt, hubHt, Rhub, Rtip,</span>
-<span class="c">#            precurvetip, presweeptip, yaw,</span>
-<span class="c">#            Uinf, Omega, pitch]</span>
-<span class="c"># vectors = [r, chord, theta, precurve, presweep]</span>
+<span class="n">npts</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">P</span><span class="p">)</span>
 
-<span class="c"># unpack scalar derivatives</span>
-<span class="n">dP_dprecone</span><span class="p">,</span> <span class="n">dP_dtilt</span><span class="p">,</span> <span class="n">dP_dhubHt</span><span class="p">,</span> <span class="n">dP_dRhub</span><span class="p">,</span> <span class="n">dP_dRtip</span><span class="p">,</span> \
-    <span class="n">dP_dprecurvetip</span><span class="p">,</span> <span class="n">dP_dpresweeptip</span><span class="p">,</span> <span class="n">dP_dyaw</span><span class="p">,</span> \
-    <span class="n">dP_dUinf</span><span class="p">,</span> <span class="n">dP_dOmega</span><span class="p">,</span> <span class="n">dP_dpitch</span> <span class="o">=</span> <span class="n">dP_ds</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
+<span class="c"># npts x 1</span>
+<span class="n">dP_dprecone</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dprecone&#39;</span><span class="p">]</span>
+<span class="n">dP_dtilt</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dtilt&#39;</span><span class="p">]</span>
+<span class="n">dP_dhubHt</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dhubHt&#39;</span><span class="p">]</span>
+<span class="n">dP_dRhub</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dRhub&#39;</span><span class="p">]</span>
+<span class="n">dP_dRtip</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dRtip&#39;</span><span class="p">]</span>
+<span class="n">dP_dprecurveTip</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dprecurveTip&#39;</span><span class="p">]</span>
+<span class="n">dP_dpresweepTip</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dpresweepTip&#39;</span><span class="p">]</span>
+<span class="n">dP_dyaw</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dyaw&#39;</span><span class="p">]</span>
 
-<span class="c"># unpack vector derivatives</span>
-<span class="n">dP_dr</span> <span class="o">=</span> <span class="n">dP_dv</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dP_dchord</span> <span class="o">=</span> <span class="n">dP_dv</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dP_dtheta</span> <span class="o">=</span> <span class="n">dP_dv</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dP_dprecurve</span> <span class="o">=</span> <span class="n">dP_dv</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">,</span> <span class="p">:]</span>
-<span class="n">dP_dpresweep</span> <span class="o">=</span> <span class="n">dP_dv</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="p">:]</span>
+<span class="c"># npts x npts</span>
+<span class="n">dP_dUinf</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dUinf&#39;</span><span class="p">]</span>
+<span class="n">dP_dOmega</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dOmega&#39;</span><span class="p">]</span>
+<span class="n">dP_dpitch</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dpitch&#39;</span><span class="p">]</span>
+
+<span class="c"># npts x n</span>
+<span class="n">dP_dr</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dr&#39;</span><span class="p">]</span>
+<span class="n">dP_dchord</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dchord&#39;</span><span class="p">]</span>
+<span class="n">dP_dtheta</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dtheta&#39;</span><span class="p">]</span>
+<span class="n">dP_dprecurve</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dprecurve&#39;</span><span class="p">]</span>
+<span class="n">dP_dpresweep</span> <span class="o">=</span> <span class="n">dP</span><span class="p">[</span><span class="s">&#39;dpresweep&#39;</span><span class="p">]</span>
 </pre></div>
 </div>
 <p>Let us compare the derivative of power against finite differencing for one of the scalar quantities (precone):</p>
@@ -315,7 +326,7 @@
 <span class="n">dQ_dprecone_fd</span> <span class="o">=</span> <span class="p">(</span><span class="n">Qd</span> <span class="o">-</span> <span class="n">Q</span><span class="p">)</span> <span class="o">/</span> <span class="n">delta</span>
 <span class="n">dP_dprecone_fd</span> <span class="o">=</span> <span class="p">(</span><span class="n">Pd</span> <span class="o">-</span> <span class="n">P</span><span class="p">)</span> <span class="o">/</span> <span class="n">delta</span>
 
-<span class="k">print</span> <span class="s">&#39;(analytic) dP/dprecone =&#39;</span><span class="p">,</span> <span class="n">dP_dprecone</span>
+<span class="k">print</span> <span class="s">&#39;(analytic) dP/dprecone =&#39;</span><span class="p">,</span> <span class="n">dP_dprecone</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
 <span class="k">print</span> <span class="s">&#39;(fin diff) dP/dprecone =&#39;</span><span class="p">,</span> <span class="n">dP_dprecone_fd</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="k">print</span>
 </pre></div>
@@ -341,7 +352,7 @@
 <span class="n">dQ_dr_fd</span> <span class="o">=</span> <span class="p">(</span><span class="n">Qd</span> <span class="o">-</span> <span class="n">Q</span><span class="p">)</span> <span class="o">/</span> <span class="n">delta</span>
 <span class="n">dP_dr_fd</span> <span class="o">=</span> <span class="p">(</span><span class="n">Pd</span> <span class="o">-</span> <span class="n">P</span><span class="p">)</span> <span class="o">/</span> <span class="n">delta</span>
 
-<span class="k">print</span> <span class="s">&#39;(analytic) dP/dr_i =&#39;</span><span class="p">,</span> <span class="n">dP_dr</span><span class="p">[</span><span class="n">idx</span><span class="p">]</span>
+<span class="k">print</span> <span class="s">&#39;(analytic) dP/dr_i =&#39;</span><span class="p">,</span> <span class="n">dP_dr</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span>
 <span class="k">print</span> <span class="s">&#39;(fin diff) dP/dr_i =&#39;</span><span class="p">,</span> <span class="n">dP_dr_fd</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
 <span class="k">print</span>
 </pre></div>
@@ -350,6 +361,7 @@
 <span class="gp">&gt;&gt;&gt; </span><span class="p">(</span><span class="n">fin</span> <span class="n">diff</span><span class="p">)</span> <span class="n">dP</span><span class="o">/</span><span class="n">dr_i</span> <span class="o">=</span> <span class="mf">848.355994992</span>
 </pre></div>
 </div>
+<p>For more comprehensive comparison to finite differencing, see the unit tests contained in test/test_gradients.py.</p>
 </div>
 </div>
 
@@ -409,12 +421,12 @@
         <li class="right" >
           <a href="installation.html" title="2. Installation"
              >previous</a> |</li>
-        <li><a href="index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, NREL.
-      Last updated on Jan 08, 2014.
+      Last updated on Jan 10, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
     </div>
   </body>

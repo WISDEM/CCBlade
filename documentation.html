@@ -6,7 +6,7 @@
   <head>
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     
-    <title>4. Module Documentation &mdash; CCBlade 1.0.5 documentation</title>
+    <title>4. Module Documentation &mdash; CCBlade 1.1.0 documentation</title>
     
     <link rel="stylesheet" href="_static/nrel.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
@@ -14,7 +14,7 @@
     <script type="text/javascript">
       var DOCUMENTATION_OPTIONS = {
         URL_ROOT:    './',
-        VERSION:     '1.0.5',
+        VERSION:     '1.1.0',
         COLLAPSE_INDEX: false,
         FILE_SUFFIX: '.html',
         HAS_SOURCE:  true
@@ -24,7 +24,7 @@
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
     <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="CCBlade 1.0.5 documentation" href="index.html" />
+    <link rel="top" title="CCBlade 1.1.0 documentation" href="index.html" />
     <link rel="next" title="5. Theory" href="theory.html" />
     <link rel="prev" title="3. Tutorial" href="tutorial.html" /> 
   </head>
@@ -41,7 +41,7 @@
         <li class="right" >
           <a href="tutorial.html" title="3. Tutorial"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>  
 
@@ -258,9 +258,17 @@ U = Uref*(z/hubHt)**shearExp</p>
 <blockquote>
 <div><p>location of blade pitch axis in x-direction of <a class="reference internal" href="csystem.html#azimuth-blade-coord"><em>blade coordinate system</em></a></p>
 </div></blockquote>
+<p><strong>precurveTip</strong> : float, optional (m)</p>
+<blockquote>
+<div><p>location of blade pitch axis in x-direction at the tip (analogous to Rtip)</p>
+</div></blockquote>
 <p><strong>presweep</strong> : array_like, optional (m)</p>
 <blockquote>
 <div><p>location of blade pitch axis in y-direction of <a class="reference internal" href="csystem.html#azimuth-blade-coord"><em>blade coordinate system</em></a></p>
+</div></blockquote>
+<p><strong>presweepTip</strong> : float, optional (m)</p>
+<blockquote>
+<div><p>location of blade pitch axis in y-direction at the tip (analogous to Rtip)</p>
 </div></blockquote>
 <p><strong>tiploss</strong> : boolean, optional</p>
 <blockquote>
@@ -286,7 +294,7 @@ not been implemented.</p>
 <blockquote>
 <div><p>The number of iterations to use to converge Reynolds number.  Generally iterRe=1 is sufficient,
 but for high accuracy in Reynolds number effects, iterRe=2 iterations can be used.  More than that
-should not be necessary.</p>
+should not be necessary.  Gradients have only been implemented for the case iterRe=1.</p>
 </div></blockquote>
 <p><strong>derivatives</strong> : boolean, optional</p>
 <blockquote class="last">
@@ -372,12 +380,12 @@ should not be necessary.</p>
         <li class="right" >
           <a href="tutorial.html" title="3. Tutorial"
              >previous</a> |</li>
-        <li><a href="index.html">CCBlade 1.0.5 documentation</a> &raquo;</li> 
+        <li><a href="index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
       </ul>
     </div>
     <div class="footer">
         &copy; Copyright 2013, NREL.
-      Last updated on Jan 08, 2014.
+      Last updated on Jan 10, 2014.
       Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
     </div>
   </body>
