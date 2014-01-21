@@ -21,4 +21,3 @@ setup(
     dependency_links=['https://github.com/NREL-WISDEM/AirfoilPreppy/tarball/master#egg=airfoilprep.py-0.1'],
     zip_safe=False
 )
-
