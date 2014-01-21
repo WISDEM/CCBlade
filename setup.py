@@ -14,11 +14,11 @@ setup(
     author_email='andrew.ning@nrel.gov',
     package_dir={'': 'src'},
     py_modules=['ccblade'],
-    install_requires=['airfoilprep>=1.0'],  # , 'zope.interface'],
+    install_requires=['airfoilprep>=0.1'],  # , 'zope.interface'],
     # test_suite='test.test_ccblade.py',
     license='Apache License, Version 2.0',
     ext_modules=[Extension('_bem', ['src/bem.f90'], extra_compile_args=['-O2'])],
-    dependency_links=['https://github.com/NREL-WISDEM/AirfoilPreppy/tarball/master#egg=airfoilprep-1.0.0'],
+    dependency_links=['https://github.com/NREL-WISDEM/AirfoilPreppy/tarball/master#egg=airfoilprep-0.1'],
     zip_safe=False
 )
 
