@@ -8,7 +8,7 @@ from numpy.distutils.core import setup, Extension
 
 setup(
     name='CCBlade',
-    version='1.1.0',
+    version='1.1.1',
     description='Blade element momentum aerodynamics for wind turbines',
     author='S. Andrew Ning',
     author_email='andrew.ning@nrel.gov',
