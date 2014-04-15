@@ -1065,9 +1065,7 @@ if __name__ == '__main__':
     azimuth = 90
 
     # evaluate distributed loads
-    Np, Tp= aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
-
-
+    Np, Tp = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
     # plot
     import matplotlib.pyplot as plt
