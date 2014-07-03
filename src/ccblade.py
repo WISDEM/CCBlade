@@ -168,8 +168,8 @@ class CCAirfoil:
 
         """
 
-        cl = self.cl_spline.ev(alpha, Re)[0]
-        cd = self.cd_spline.ev(alpha, Re)[0]
+        cl = self.cl_spline.ev(alpha, Re)
+        cd = self.cd_spline.ev(alpha, Re)
 
         return cl, cd
 
