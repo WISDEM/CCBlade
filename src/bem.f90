@@ -20,28 +20,28 @@ subroutine inductionFactors(r, chord, Rhub, Rtip, phi, cl, cd, B, &
 
     implicit none
 
-    integer, parameter :: ReKi = selected_real_kind(15, 307)
+    integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(ReKi), intent(in) :: r, chord, Rhub, Rtip, phi, cl, cd
+    real(dp), intent(in) :: r, chord, Rhub, Rtip, phi, cl, cd
     integer, intent(in) :: B
-    real(ReKi), intent(in) :: Vx, Vy
+    real(dp), intent(in) :: Vx, Vy
     logical, intent(in) :: useCd, hubLoss, tipLoss, wakerotation
     !f2py logical, optional, intent(in) :: useCd = 1, hubLoss = 1, tipLoss = 1, wakerotation = 1
 
     ! out
-    real(ReKi), intent(out) :: fzero, a, ap
+    real(dp), intent(out) :: fzero, a, ap
 
     ! local
-    real(ReKi) :: pi, sigma_p, sphi, cphi, lambda_r
-    real(ReKi) :: factortip, Ftip, factorhub, Fhub
-    real(ReKi) :: k, kp, cn, ct, F
-    real(ReKi) :: g1, g2, g3
+    real(dp) :: pi, sigma_p, sphi, cphi, lambda_r
+    real(dp) :: factortip, Ftip, factorhub, Fhub
+    real(dp) :: k, kp, cn, ct, F
+    real(dp) :: g1, g2, g3
 
 
     ! constants
-    pi = 3.1415926535897932
-    sigma_p = B/2.0/pi*chord/r
+    pi = 3.1415926535897932_dp
+    sigma_p = B/2.0_dp/pi*chord/r
     sphi = sin(phi)
     cphi = cos(phi)
 
@@ -55,50 +55,51 @@ subroutine inductionFactors(r, chord, Rhub, Rtip, phi, cl, cd, B, &
     end if
 
     ! Prandtl's tip and hub loss factor
-    Ftip = 1.0
+    Ftip = 1.0_dp
     if ( tipLoss ) then
-        factortip = B/2.0*(Rtip - r)/(r*abs(sphi))
-        Ftip = 2.0/pi*acos(exp(-factortip))
+        factortip = B/2.0_dp*(Rtip - r)/(r*abs(sphi))
+        Ftip = 2.0_dp/pi*acos(exp(-factortip))
     end if
 
-    Fhub = 1.0
+    Fhub = 1.0_dp
     if ( hubLoss ) then
-        factorhub = B/2.0*(r - Rhub)/(Rhub*abs(sphi))
-        Fhub = 2.0/pi*acos(exp(-factorhub))
+        factorhub = B/2.0_dp*(r - Rhub)/(Rhub*abs(sphi))
+        Fhub = 2.0_dp/pi*acos(exp(-factorhub))
     end if
 
     F = Ftip * Fhub
 
     ! bem parameters
-    k = sigma_p*cn/4/F/sphi/sphi
-    kp = sigma_p*ct/4/F/sphi/cphi
+    k = sigma_p*cn/4.0_dp/F/sphi/sphi
+    kp = sigma_p*ct/4.0_dp/F/sphi/cphi
 
     ! compute axial induction factor
     if (phi > 0) then  ! momentum/empirical
 
         ! update axial induction factor
-        if (k <= 2.0/3) then  ! momentum state
+        if (k <= 2.0_dp/3.0) then  ! momentum state
             a = k/(1+k)
 
         else  ! Glauert(Buhl) correction
-            if ( abs(k - (25.0/18/F - 1.0)) < 1e-6) then
-                k = k + 1.0e-5  ! avoid singularity
+
+            g1 = 2.0_dp*F*k - (10.0_dp/9-F)
+            g2 = 2.0_dp*F*k - (4.0_dp/3-F)*F
+            g3 = 2.0_dp*F*k - (25.0_dp/9-2*F)
+
+            if (abs(g3) < 1e-6_dp) then  ! avoid singularity
+                a = 1.0_dp - 1.0_dp/2.0/sqrt(g2)
+            else
+                a = (g1 - sqrt(g2)) / g3
             end if
-
-            g1 = 2*F*k - (10.0/9-F)
-            g2 = 2*F*k - (4.0/3-F)*F
-            g3 = 2*F*k - (25.0/9-2*F)
-
-            a = (g1 - sqrt(g2)) / g3
 
         end if
 
     else  ! propeller brake region (a and ap not directly used but update anyway)
 
-        if (k > 1.0) then
+        if (k > 1) then
             a = k/(k-1)
         else
-            a = 0.0  ! dummy value
+            a = 0.0_dp  ! dummy value
         end if
 
     end if
@@ -107,8 +108,8 @@ subroutine inductionFactors(r, chord, Rhub, Rtip, phi, cl, cd, B, &
     ap = kp/(1-kp)
 
     if (.not. wakerotation) then
-        ap = 0.0
-        kp = 0.0
+        ap = 0.0_dp
+        kp = 0.0_dp
     end if
 
     ! error function
@@ -129,14 +130,14 @@ subroutine relativeWind(phi, a, ap, Vx, Vy, pitch, &
 
     implicit none
 
-    integer, parameter :: ReKi = selected_real_kind(15, 307)
+    integer, parameter :: dp = kind(0.d0)
 
     ! in
-    real(ReKi), intent(in) :: phi, a, ap, Vx, Vy, pitch
-    real(ReKi), intent(in) :: chord, theta, rho, mu
+    real(dp), intent(in) :: phi, a, ap, Vx, Vy, pitch
+    real(dp), intent(in) :: chord, theta, rho, mu
 
     ! out
-    real(ReKi), intent(out) :: alpha, W, Re
+    real(dp), intent(out) :: alpha, W, Re
 
     ! angle of attack
     alpha = phi - (theta + pitch)
@@ -164,15 +165,15 @@ subroutine defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, 
 
     implicit none
 
-    integer, parameter :: ReKi = selected_real_kind(15, 307)
+    integer, parameter :: dp = kind(0.d0)
 
     ! in
     integer, intent(in) :: n
-    real(ReKi), dimension(n), intent(in) :: r, precurve, presweep
-    real(ReKi), intent(in) :: precone
+    real(dp), dimension(n), intent(in) :: r, precurve, presweep
+    real(dp), intent(in) :: precone
 
     ! out
-    real(ReKi), dimension(n), intent(out) :: x_az, y_az, z_az, cone, s
+    real(dp), dimension(n), intent(out) :: x_az, y_az, z_az, cone, s
 
     ! local
     integer :: i
@@ -188,13 +189,13 @@ subroutine defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, 
 
     ! compute total coning angle for purposes of relative velocity
     cone(1) = atan2(-(x_az(2) - x_az(1)), z_az(2) - z_az(1))
-    cone(2:n-1) = 0.5*(atan2(-(x_az(2:n-1) - x_az(1:n-2)), z_az(2:n-1) - z_az(1:n-2)) &
+    cone(2:n-1) = 0.5_dp*(atan2(-(x_az(2:n-1) - x_az(1:n-2)), z_az(2:n-1) - z_az(1:n-2)) &
                        + atan2(-(x_az(3:n) - x_az(2:n-1)), z_az(3:n) - z_az(2:n-1)))
     cone(n) = atan2(-(x_az(n) - x_az(n-1)), z_az(n) - z_az(n-1))
 
 
     ! total path length of blade
-    s(1) = 0.0
+    s(1) = 0.0_dp
     do i = 2, n
         s(i) = s(i-1) + sqrt((precurve(i) - precurve(i-1))**2 + &
             (presweep(i) - presweep(i-1))**2 + (r(i) - r(i-1))**2)
@@ -211,20 +212,20 @@ subroutine windComponents(n, r, precurve, presweep, precone, yaw, tilt, azimuth,
 
     implicit none
 
-    integer, parameter :: ReKi = selected_real_kind(15, 307)
+    integer, parameter :: dp = kind(0.d0)
 
     ! in
     integer, intent(in) :: n
-    real(ReKi), dimension(n), intent(in) :: r, precurve, presweep
-    real(ReKi), intent(in) :: precone, yaw, tilt, azimuth, Uinf, OmegaRPM, hubHt, shearExp
+    real(dp), dimension(n), intent(in) :: r, precurve, presweep
+    real(dp), intent(in) :: precone, yaw, tilt, azimuth, Uinf, OmegaRPM, hubHt, shearExp
 
     ! out
-    real(ReKi), dimension(n), intent(out) :: Vx, Vy
+    real(dp), dimension(n), intent(out) :: Vx, Vy
 
     ! local
-    real(ReKi) :: sy, cy, st, ct, sa, ca, pi, Omega
-    real(ReKi), dimension(n) :: cone, sc, cc, x_az, y_az, z_az, sint
-    real(ReKi), dimension(n) :: heightFromHub, V, Vwind_x, Vwind_y, Vrot_x, Vrot_y
+    real(dp) :: sy, cy, st, ct, sa, ca, pi, Omega
+    real(dp), dimension(n) :: cone, sc, cc, x_az, y_az, z_az, sint
+    real(dp), dimension(n) :: heightFromHub, V, Vwind_x, Vwind_y, Vrot_x, Vrot_y
 
 
     ! rename
@@ -234,8 +235,8 @@ subroutine windComponents(n, r, precurve, presweep, precone, yaw, tilt, azimuth,
     ct = cos(tilt)
     sa = sin(azimuth)
     ca = cos(azimuth)
-    pi = 3.1415926535897932
-    Omega = OmegaRPM * pi/30.0
+    pi = 3.1415926535897932_dp
+    Omega = OmegaRPM * pi/30.0_dp
 
 
     call defineCurvature(n, r, precurve, presweep, precone, x_az, y_az, z_az, cone, sint)
@@ -289,20 +290,20 @@ subroutine thrustTorque(n, Np, Tp, r, precurve, presweep, precone, &
 
     implicit none
 
-    integer, parameter :: ReKi = selected_real_kind(15, 307)
+    integer, parameter :: dp = kind(0.d0)
 
     ! in
     integer, intent(in) :: n
-    real(ReKi), dimension(n), intent(in) :: Np, Tp, r, precurve, presweep
-    real(ReKi), intent(in) :: precone, Rhub, Rtip, precurveTip, presweepTip
+    real(dp), dimension(n), intent(in) :: Np, Tp, r, precurve, presweep
+    real(dp), intent(in) :: precone, Rhub, Rtip, precurveTip, presweepTip
 
     ! out
-    real(ReKi), intent(out) :: T, Q
+    real(dp), intent(out) :: T, Q
 
     ! local
-    real(ReKi) :: ds
-    real(ReKi), dimension(n+2) :: rfull, curvefull, sweepfull, Npfull, Tpfull
-    real(ReKi), dimension(n+2) :: thrust, torque, x_az, y_az, z_az, cone, s
+    real(dp) :: ds
+    real(dp), dimension(n+2) :: rfull, curvefull, sweepfull, Npfull, Tpfull
+    real(dp), dimension(n+2) :: thrust, torque, x_az, y_az, z_az, cone, s
     integer :: i
 
 
@@ -311,21 +312,21 @@ subroutine thrustTorque(n, Np, Tp, r, precurve, presweep, precone, &
     rfull(2:n+1) = r
     rfull(n+2) = Rtip
 
-    curvefull(1) = 0.0
+    curvefull(1) = 0.0_dp
     curvefull(2:n+1) = precurve
     curvefull(n+2) = precurveTip
 
-    sweepfull(1) = 0
+    sweepfull(1) = 0.0_dp
     sweepfull(2:n+1) = presweep
     sweepfull(n+2) = presweepTip
 
-    Npfull(1) = 0.0
+    Npfull(1) = 0.0_dp
     Npfull(2:n+1) = Np
-    Npfull(n+2) = 0.0
+    Npfull(n+2) = 0.0_dp
 
-    Tpfull(1) = 0.0
+    Tpfull(1) = 0.0_dp
     Tpfull(2:n+1) = Tp
-    Tpfull(n+2) = 0.0
+    Tpfull(n+2) = 0.0_dp
 
 
     ! get z_az and total cone angle
@@ -336,11 +337,11 @@ subroutine thrustTorque(n, Np, Tp, r, precurve, presweep, precone, &
     thrust = Npfull*cos(cone)
     torque = Tpfull*z_az
 
-    T = 0.0
+    T = 0.0_dp
     do i = 1, n+1
         ds = s(i+1) - s(i)
-        T = T + 0.5*(thrust(i) + thrust(i+1))*ds
-        Q = Q + 0.5*(torque(i) + torque(i+1))*ds
+        T = T + 0.5_dp*(thrust(i) + thrust(i+1))*ds
+        Q = Q + 0.5_dp*(torque(i) + torque(i+1))*ds
     end do
 
 
@@ -352,7 +353,7 @@ end subroutine thrustTorque
 
 
 !        Generated by TAPENADE     (INRIA, Tropics team)
-!  Tapenade 3.7 (r4888) - 28 May 2013 10:47
+!  Tapenade 3.9 (r5096) - 24 Feb 2014 16:54
 !
 !  Differentiation of inductionfactors in forward (tangent) mode:
 !   variations   of useful results: ap fzero a
@@ -361,64 +362,61 @@ end subroutine thrustTorque
 !   RW status of diff variables: r:in rtip:in ap:out rhub:in chord:in
 !                fzero:out phi:in cd:in cl:in vx:in vy:in a:out
 
-! modified nbdirs/nbdirsmax
 SUBROUTINE INDUCTIONFACTORS_DV(r, chord, rhub, rtip, phi, cl, cd, b, &
   vx, vy, usecd, hubloss, tiploss, wakerotation, &
   rd, chordd, rhubd, rtipd, phid, cld, cdd, vxd, vyd, &
   fzero, a, ap, fzerod, ad, apd, nbdirs)
-
-!  Hint: nbdirs should be the maximum number of differentiation directions
+!  Hint: nbdirsmax should be the maximum number of differentiation directions
   IMPLICIT NONE
-  INTEGER, PARAMETER :: reki=SELECTED_REAL_KIND(15, 307)
+  INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
-  INTEGER, INTENT(IN) :: nbdirs
-  REAL(reki), INTENT(IN) :: r, chord, rhub, rtip, phi, cl, cd
-  REAL(reki), DIMENSION(nbdirs), INTENT(IN) :: rd, chordd, rhubd, &
-&  rtipd, phid, cld, cdd
+  REAL(dp), INTENT(IN) :: r, chord, rhub, rtip, phi, cl, cd
+  REAL(dp), DIMENSION(nbdirs), INTENT(IN) :: rd, chordd, rhubd, rtipd&
+& , phid, cld, cdd
   INTEGER, INTENT(IN) :: b
-  REAL(reki), INTENT(IN) :: vx, vy
-  REAL(reki), DIMENSION(nbdirs), INTENT(IN) :: vxd, vyd
+  REAL(dp), INTENT(IN) :: vx, vy
+  REAL(dp), DIMENSION(nbdirs), INTENT(IN) :: vxd, vyd
   LOGICAL, INTENT(IN) :: usecd, hubloss, tiploss, wakerotation
+  INTEGER, intent(in) :: nbdirs
 !f2py logical, optional, intent(in) :: useCd = 1, hubLoss = 1, tipLoss = 1, wakerotation = 1
 ! out
-  REAL(reki), INTENT(OUT) :: fzero, a, ap
-  REAL(reki), DIMENSION(nbdirs), INTENT(OUT) :: fzerod, ad, apd
+  REAL(dp), INTENT(OUT) :: fzero, a, ap
+  REAL(dp), DIMENSION(nbdirs), INTENT(OUT) :: fzerod, ad, apd
 ! local
-  REAL(reki) :: pi, sigma_p, sphi, cphi, lambda_r
-  REAL(reki), DIMENSION(nbdirs) :: sigma_pd, sphid, cphid, lambda_rd
-  REAL(reki) :: factortip, ftip, factorhub, fhub
-  REAL(reki), DIMENSION(nbdirs) :: factortipd, ftipd, factorhubd, &
-&  fhubd
-  REAL(reki) :: k, kp, cn, ct, f
-  REAL(reki), DIMENSION(nbdirs) :: kd, kpd, cnd, ctd, fd
-  REAL(reki) :: g1, g2, g3
-  REAL(reki), DIMENSION(nbdirs) :: g1d, g2d, g3d
-  REAL(reki) :: arg1
-  REAL(reki), DIMENSION(nbdirs) :: arg1d
-  REAL(reki) :: result1
-  REAL(reki), DIMENSION(nbdirs) :: result1d
-  INTEGER :: nd
-  INTRINSIC COS
-  INTRINSIC EXP
-  REAL(reki) :: abs1d(nbdirs)
+  REAL(dp) :: pi, sigma_p, sphi, cphi, lambda_r
+  REAL(dp), DIMENSION(nbdirs) :: sigma_pd, sphid, cphid, lambda_rd
+  REAL(dp) :: factortip, ftip, factorhub, fhub
+  REAL(dp), DIMENSION(nbdirs) :: factortipd, ftipd, factorhubd, fhubd
+  REAL(dp) :: k, kp, cn, ct, f
+  REAL(dp), DIMENSION(nbdirs) :: kd, kpd, cnd, ctd, fd
+  REAL(dp) :: g1, g2, g3
+  REAL(dp), DIMENSION(nbdirs) :: g1d, g2d, g3d
+  INTRINSIC KIND
   INTRINSIC SIN
+  INTRINSIC COS
   INTRINSIC ABS
-  REAL(reki) :: abs0d(nbdirs)
-  INTRINSIC SELECTED_REAL_KIND
+  INTRINSIC EXP
   INTRINSIC ACOS
-  REAL(reki) :: abs2
-  REAL(reki) :: abs1
-  REAL(reki) :: abs0
   INTRINSIC SQRT
+  REAL(dp) :: arg1
+  REAL(dp), DIMENSION(nbdirs) :: arg1d
+  REAL(dp) :: result1
+  REAL(dp), DIMENSION(nbdirs) :: result1d
+  INTEGER :: nd
+  REAL(dp) :: abs1d(nbdirs)
+  REAL(dp) :: abs0d(nbdirs)
+  REAL(dp) :: abs2
+  REAL(dp) :: abs1
+  REAL(dp) :: abs0
 ! constants
-  pi = 3.1415926535897932
+  pi = 3.1415926535897932_dp
   DO nd=1,nbdirs
-    sigma_pd(nd) = (b*chordd(nd)*r/(2.0*pi)-b*chord*rd(nd)/(2.0*pi))/r**&
-&      2
+    sigma_pd(nd) = (b*chordd(nd)*r/(2.0_dp*pi)-b*chord*rd(nd)/(2.0_dp*pi&
+&     ))/r**2
     sphid(nd) = phid(nd)*COS(phi)
     cphid(nd) = -(phid(nd)*SIN(phi))
   END DO
-  sigma_p = b/2.0/pi*chord/r
+  sigma_p = b/2.0_dp/pi*chord/r
   sphi = SIN(phi)
   cphi = COS(phi)
 ! resolve into normal and tangential forces
@@ -432,15 +430,15 @@ SUBROUTINE INDUCTIONFACTORS_DV(r, chord, rhub, rtip, phi, cl, cd, b, &
   ELSE
     DO nd=1,nbdirs
       cnd(nd) = cld(nd)*cphi + cl*cphid(nd) + cdd(nd)*sphi + cd*sphid(nd&
-&        )
+&       )
       ctd(nd) = cld(nd)*sphi + cl*sphid(nd) - cdd(nd)*cphi - cd*cphid(nd&
-&        )
+&       )
     END DO
     cn = cl*cphi + cd*sphi
     ct = cl*sphi - cd*cphi
   END IF
 ! Prandtl's tip and hub loss factor
-  ftip = 1.0
+  ftip = 1.0_dp
   IF (tiploss) THEN
     IF (sphi .GE. 0.) THEN
       DO nd=1,nbdirs
@@ -453,27 +451,27 @@ SUBROUTINE INDUCTIONFACTORS_DV(r, chord, rhub, rtip, phi, cl, cd, b, &
       END DO
       abs0 = -sphi
     END IF
-    factortip = b/2.0*(rtip-r)/(r*abs0)
+    factortip = b/2.0_dp*(rtip-r)/(r*abs0)
     arg1 = EXP(-factortip)
     DO nd=1,nbdirs
-      factortipd(nd) = (b*(rtipd(nd)-rd(nd))*r*abs0/2.0-b*(rtip-r)*(rd(&
-&        nd)*abs0+r*abs0d(nd))/2.0)/(r*abs0)**2
+      factortipd(nd) = (b*(rtipd(nd)-rd(nd))*r*abs0/2.0_dp-b*(rtip-r)*(&
+&       rd(nd)*abs0+r*abs0d(nd))/2.0_dp)/(r*abs0)**2
       arg1d(nd) = -(factortipd(nd)*EXP(-factortip))
       IF (arg1 .EQ. 1.0 .OR. arg1 .EQ. (-1.0)) THEN
         result1d(nd) = 0.0
       ELSE
         result1d(nd) = -(arg1d(nd)/SQRT(1.0-arg1**2))
       END IF
-      ftipd(nd) = 2.0*result1d(nd)/pi
+      ftipd(nd) = 2.0_dp*result1d(nd)/pi
     END DO
     result1 = ACOS(arg1)
-    ftip = 2.0/pi*result1
+    ftip = 2.0_dp/pi*result1
   ELSE
     DO nd=1,nbdirs
       ftipd(nd) = 0.0
     END DO
   END IF
-  fhub = 1.0
+  fhub = 1.0_dp
   IF (hubloss) THEN
     IF (sphi .GE. 0.) THEN
       DO nd=1,nbdirs
@@ -486,21 +484,21 @@ SUBROUTINE INDUCTIONFACTORS_DV(r, chord, rhub, rtip, phi, cl, cd, b, &
       END DO
       abs1 = -sphi
     END IF
-    factorhub = b/2.0*(r-rhub)/(rhub*abs1)
+    factorhub = b/2.0_dp*(r-rhub)/(rhub*abs1)
     arg1 = EXP(-factorhub)
     DO nd=1,nbdirs
-      factorhubd(nd) = (b*(rd(nd)-rhubd(nd))*rhub*abs1/2.0-b*(r-rhub)*(&
-&        rhubd(nd)*abs1+rhub*abs1d(nd))/2.0)/(rhub*abs1)**2
+      factorhubd(nd) = (b*(rd(nd)-rhubd(nd))*rhub*abs1/2.0_dp-b*(r-rhub)&
+&       *(rhubd(nd)*abs1+rhub*abs1d(nd))/2.0_dp)/(rhub*abs1)**2
       arg1d(nd) = -(factorhubd(nd)*EXP(-factorhub))
       IF (arg1 .EQ. 1.0 .OR. arg1 .EQ. (-1.0)) THEN
         result1d(nd) = 0.0
       ELSE
         result1d(nd) = -(arg1d(nd)/SQRT(1.0-arg1**2))
       END IF
-      fhubd(nd) = 2.0*result1d(nd)/pi
+      fhubd(nd) = 2.0_dp*result1d(nd)/pi
     END DO
     result1 = ACOS(arg1)
-    fhub = 2.0/pi*result1
+    fhub = 2.0_dp/pi*result1
   ELSE
     DO nd=1,nbdirs
       fhubd(nd) = 0.0
@@ -509,54 +507,69 @@ SUBROUTINE INDUCTIONFACTORS_DV(r, chord, rhub, rtip, phi, cl, cd, b, &
   f = ftip*fhub
   DO nd=1,nbdirs
     fd(nd) = ftipd(nd)*fhub + ftip*fhubd(nd)
-    kd(nd) = ((((sigma_pd(nd)*cn+sigma_p*cnd(nd))*f/4-sigma_p*cn*fd(nd)/&
-&      4)*sphi/f**2-sigma_p*cn*sphid(nd)/(4*f))/sphi-sigma_p*cn*sphid(nd)&
-&      /(4*f*sphi))/sphi**2
-    kpd(nd) = ((((sigma_pd(nd)*ct+sigma_p*ctd(nd))*f/4-sigma_p*ct*fd(nd)&
-&      /4)*sphi/f**2-sigma_p*ct*sphid(nd)/(4*f))*cphi/sphi**2-sigma_p*ct*&
-&      cphid(nd)/(4*f*sphi))/cphi**2
-  END DO
 ! bem parameters
-  k = sigma_p*cn/4/f/sphi/sphi
-  kp = sigma_p*ct/4/f/sphi/cphi
+    kd(nd) = ((((sigma_pd(nd)*cn+sigma_p*cnd(nd))*f/4.0_dp-sigma_p*cn*fd&
+&     (nd)/4.0_dp)*sphi/f**2-sigma_p*cn*sphid(nd)/(4.0_dp*f))/sphi-&
+&     sigma_p*cn*sphid(nd)/(4.0_dp*f*sphi))/sphi**2
+    kpd(nd) = ((((sigma_pd(nd)*ct+sigma_p*ctd(nd))*f/4.0_dp-sigma_p*ct*&
+&     fd(nd)/4.0_dp)*sphi/f**2-sigma_p*ct*sphid(nd)/(4.0_dp*f))*cphi/&
+&     sphi**2-sigma_p*ct*cphid(nd)/(4.0_dp*f*sphi))/cphi**2
+  END DO
+  k = sigma_p*cn/4.0_dp/f/sphi/sphi
+  kp = sigma_p*ct/4.0_dp/f/sphi/cphi
 ! compute axial induction factor
   IF (phi .GT. 0) THEN
 ! momentum/empirical
 ! update axial induction factor
-    IF (k .LE. 2.0/3) THEN
+    IF (k .LE. 2.0_dp/3.0) THEN
       DO nd=1,nbdirs
+! momentum state
         ad(nd) = (kd(nd)*(1+k)-k*kd(nd))/(1+k)**2
       END DO
-! momentum state
       a = k/(1+k)
     ELSE
-      IF (k - (25.0/18/f-1.0) .GE. 0.) THEN
-        abs2 = k - (25.0/18/f-1.0)
-      ELSE
-        abs2 = -(k-(25.0/18/f-1.0))
-      END IF
-! Glauert(Buhl) correction
-      IF (abs2 .LT. 1e-6) k = k + 1.0e-5
-! avoid singularity
-      g1 = 2*f*k - (10.0/9-f)
-      g2 = 2*f*k - (4.0/3-f)*f
-      g3 = 2*f*k - (25.0/9-2*f)
-      result1 = SQRT(g2)
       DO nd=1,nbdirs
-        g1d(nd) = 2*(fd(nd)*k) + 2*(f*kd(nd)) + fd(nd)
-        g2d(nd) = 2*(fd(nd)*k) + 2*(f*kd(nd)) - (4.0/3-f)*fd(nd) + fd(nd&
-&          )*f
-        g3d(nd) = 2*(fd(nd)*k) + 2*(f*kd(nd)) + 2*fd(nd)
-        IF (g2 .EQ. 0.0) THEN
-          result1d(nd) = 0.0
-        ELSE
-          result1d(nd) = g2d(nd)/(2.0*SQRT(g2))
-        END IF
-        ad(nd) = ((g1d(nd)-result1d(nd))*g3-(g1-result1)*g3d(nd))/g3**2
+! Glauert(Buhl) correction
+        g1d(nd) = 2.0_dp*(fd(nd)*k+f*kd(nd)) + fd(nd)
+        g2d(nd) = 2.0_dp*(fd(nd)*k+f*kd(nd)) - (4.0_dp/3-f)*fd(nd) + fd(&
+&         nd)*f
+        g3d(nd) = 2.0_dp*(fd(nd)*k+f*kd(nd)) + 2*fd(nd)
       END DO
-      a = (g1-result1)/g3
+      g1 = 2.0_dp*f*k - (10.0_dp/9-f)
+      g2 = 2.0_dp*f*k - (4.0_dp/3-f)*f
+      g3 = 2.0_dp*f*k - (25.0_dp/9-2*f)
+      IF (g3 .GE. 0.) THEN
+        abs2 = g3
+      ELSE
+        abs2 = -g3
+      END IF
+      IF (abs2 .LT. 1e-6_dp) THEN
+        result1 = SQRT(g2)
+        DO nd=1,nbdirs
+! avoid singularity
+          IF (g2 .EQ. 0.0) THEN
+            result1d(nd) = 0.0
+          ELSE
+            result1d(nd) = g2d(nd)/(2.0*SQRT(g2))
+          END IF
+          ad(nd) = result1d(nd)/2.0/result1**2
+        END DO
+        a = 1.0_dp - 1.0_dp/2.0/result1
+      ELSE
+        result1 = SQRT(g2)
+        DO nd=1,nbdirs
+          IF (g2 .EQ. 0.0) THEN
+            result1d(nd) = 0.0
+          ELSE
+            result1d(nd) = g2d(nd)/(2.0*SQRT(g2))
+          END IF
+          ad(nd) = ((g1d(nd)-result1d(nd))*g3-(g1-result1)*g3d(nd))/g3**&
+&           2
+        END DO
+        a = (g1-result1)/g3
+      END IF
     END IF
-  ELSE IF (k .GT. 1.0) THEN
+  ELSE IF (k .GT. 1) THEN
 ! propeller brake region (a and ap not directly used but update anyway)
     DO nd=1,nbdirs
       ad(nd) = (kd(nd)*(k-1)-k*kd(nd))/(k-1)**2
@@ -564,43 +577,43 @@ SUBROUTINE INDUCTIONFACTORS_DV(r, chord, rhub, rtip, phi, cl, cd, b, &
     a = k/(k-1)
   ELSE
 ! dummy value
-    a = 0.0
+    a = 0.0_dp
     DO nd=1,nbdirs
       ad(nd) = 0.0
     END DO
   END IF
   DO nd=1,nbdirs
+! compute tangential induction factor
     apd(nd) = (kpd(nd)*(1-kp)+kp*kpd(nd))/(1-kp)**2
   END DO
-! compute tangential induction factor
   ap = kp/(1-kp)
   IF (.NOT.wakerotation) THEN
-    ap = 0.0
-    kp = 0.0
+    ap = 0.0_dp
+    kp = 0.0_dp
     DO nd=1,nbdirs
       apd(nd) = 0.0
       kpd(nd) = 0.0
     END DO
   END IF
   DO nd=1,nbdirs
+! error function
     lambda_rd(nd) = (vyd(nd)*vx-vy*vxd(nd))/vx**2
   END DO
-! error function
   lambda_r = vy/vx
   IF (phi .GT. 0) THEN
     DO nd=1,nbdirs
-      fzerod(nd) = (sphid(nd)*(1-a)+sphi*ad(nd))/(1-a)**2 - (cphid(nd)*&
-&        lambda_r-cphi*lambda_rd(nd))*(1-kp)/lambda_r**2 + cphi*kpd(nd)/&
-&        lambda_r
-    END DO
 ! momentum/empirical
+      fzerod(nd) = (sphid(nd)*(1-a)+sphi*ad(nd))/(1-a)**2 - (cphid(nd)*&
+&       lambda_r-cphi*lambda_rd(nd))*(1-kp)/lambda_r**2 + cphi*kpd(nd)/&
+&       lambda_r
+    END DO
     fzero = sphi/(1-a) - cphi/lambda_r*(1-kp)
   ELSE
     DO nd=1,nbdirs
-      fzerod(nd) = sphid(nd)*(1-k) - sphi*kd(nd) - (cphid(nd)*lambda_r-&
-&        cphi*lambda_rd(nd))*(1-kp)/lambda_r**2 + cphi*kpd(nd)/lambda_r
-    END DO
 ! propeller brake region
+      fzerod(nd) = sphid(nd)*(1-k) - sphi*kd(nd) - (cphid(nd)*lambda_r-&
+&       cphi*lambda_rd(nd))*(1-kp)/lambda_r**2 + cphi*kpd(nd)/lambda_r
+    END DO
     fzero = sphi*(1-k) - cphi/lambda_r*(1-kp)
   END IF
 END SUBROUTINE INDUCTIONFACTORS_DV
@@ -609,7 +622,7 @@ END SUBROUTINE INDUCTIONFACTORS_DV
 
 
 !        Generated by TAPENADE     (INRIA, Tropics team)
-!  Tapenade 3.8 (r5001) -  5 Nov 2013 10:56
+!  Tapenade 3.9 (r5096) - 24 Feb 2014 16:54
 !
 !  Differentiation of relativewind in forward (tangent) mode:
 !   variations   of useful results: alpha w re
@@ -617,33 +630,33 @@ END SUBROUTINE INDUCTIONFACTORS_DV
 !                vy a
 !   RW status of diff variables: alpha:out w:out ap:in re:out chord:in
 !                theta:in pitch:in phi:in vx:in vy:in a:in
+
 SUBROUTINE RELATIVEWIND_DV(phi, phid, a, ad, ap, apd, vx, vxd, vy, vyd, &
 & pitch, pitchd, chord, chordd, theta, thetad, rho, mu, alpha, alphad, w&
 & , wd, re, red, nbdirs)
-!   USE DIFFSIZES
-!  Hint: nbdirs should be the maximum number of differentiation directions
+!  Hint: nbdirsmax should be the maximum number of differentiation directions
   IMPLICIT NONE
-  INTEGER, PARAMETER :: reki=SELECTED_REAL_KIND(15, 307)
+  INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
-  REAL(reki), INTENT(IN) :: phi, a, ap, vx, vy, pitch
-  REAL(reki), DIMENSION(nbdirs), INTENT(IN) :: phid, ad, apd, vxd, &
-& vyd, pitchd
-  REAL(reki), INTENT(IN) :: chord, theta, rho, mu
-  REAL(reki), DIMENSION(nbdirs), INTENT(IN) :: chordd, thetad
+  REAL(dp), INTENT(IN) :: phi, a, ap, vx, vy, pitch
+  REAL(dp), DIMENSION(nbdirs), INTENT(IN) :: phid, ad, apd, vxd, vyd&
+& , pitchd
+  REAL(dp), INTENT(IN) :: chord, theta, rho, mu
+  REAL(dp), DIMENSION(nbdirs), INTENT(IN) :: chordd, thetad
+  INTEGER, intent(in) :: nbdirs
 ! out
-  REAL(reki), INTENT(OUT) :: alpha, w, re
-  REAL(reki), DIMENSION(nbdirs), INTENT(OUT) :: alphad, wd, red
-  INTRINSIC SELECTED_REAL_KIND
+  REAL(dp), INTENT(OUT) :: alpha, w, re
+  REAL(dp), DIMENSION(nbdirs), INTENT(OUT) :: alphad, wd, red
+  INTRINSIC KIND
   INTRINSIC ABS
   INTRINSIC COS
   INTRINSIC SIN
   INTRINSIC SQRT
-  REAL(reki) :: arg1
-  REAL(reki), DIMENSION(nbdirs) :: arg1d
+  REAL(dp) :: arg1
+  REAL(dp), DIMENSION(nbdirs) :: arg1d
   INTEGER :: nd
-  INTEGER :: nbdirs
-  REAL(reki) :: abs1
-  REAL(reki) :: abs0
+  REAL(dp) :: abs1
+  REAL(dp) :: abs0
   DO nd=1,nbdirs
 ! angle of attack
     alphad(nd) = phid(nd) - thetad(nd) - pitchd(nd)
@@ -699,7 +712,7 @@ END SUBROUTINE RELATIVEWIND_DV
 
 
 !        Generated by TAPENADE     (INRIA, Tropics team)
-!  Tapenade 3.8 (r5001) -  5 Nov 2013 10:56
+!  Tapenade 3.9 (r5096) - 24 Feb 2014 16:54
 !
 !  Differentiation of windcomponents in forward (tangent) mode:
 !   variations   of useful results: vx vy
@@ -708,54 +721,53 @@ END SUBROUTINE RELATIVEWIND_DV
 !   RW status of diff variables: yaw:in r:in azimuth:in precurve:in
 !                tilt:in presweep:in hubht:in omegarpm:in uinf:in
 !                vx:out vy:out precone:in
+
 SUBROUTINE WINDCOMPONENTS_DV(n, r, rd, precurve, precurved, presweep, &
 & presweepd, precone, preconed, yaw, yawd, tilt, tiltd, azimuth, &
 & azimuthd, uinf, uinfd, omegarpm, omegarpmd, hubht, hubhtd, shearexp, &
 & vx, vxd, vy, vyd, nbdirs)
-!   USE DIFFSIZES
-!  Hint: nbdirs should be the maximum number of differentiation directions
+!  Hint: nbdirsmax should be the maximum number of differentiation directions
   IMPLICIT NONE
-  INTEGER, PARAMETER :: reki=SELECTED_REAL_KIND(15, 307)
+  INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
   INTEGER, INTENT(IN) :: n
-  REAL(reki), DIMENSION(n), INTENT(IN) :: r, precurve, presweep
-  REAL(reki), DIMENSION(nbdirs, n), INTENT(IN) :: rd, precurved, &
+  REAL(dp), DIMENSION(n), INTENT(IN) :: r, precurve, presweep
+  REAL(dp), DIMENSION(nbdirs, n), INTENT(IN) :: rd, precurved, &
 & presweepd
-  REAL(reki), INTENT(IN) :: precone, yaw, tilt, azimuth, uinf, omegarpm&
-& , hubht, shearexp
-  REAL(reki), DIMENSION(nbdirs), INTENT(IN) :: preconed, yawd, tiltd&
-& , azimuthd, uinfd, omegarpmd, hubhtd
+  REAL(dp), INTENT(IN) :: precone, yaw, tilt, azimuth, uinf, omegarpm, &
+& hubht, shearexp
+  REAL(dp), DIMENSION(nbdirs), INTENT(IN) :: preconed, yawd, tiltd, &
+& azimuthd, uinfd, omegarpmd, hubhtd
+  INTEGER, intent(in) :: nbdirs
 ! out
-  REAL(reki), DIMENSION(n), INTENT(OUT) :: vx, vy
-  REAL(reki), DIMENSION(nbdirs, n), INTENT(OUT) :: vxd, vyd
+  REAL(dp), DIMENSION(n), INTENT(OUT) :: vx, vy
+  REAL(dp), DIMENSION(nbdirs, n), INTENT(OUT) :: vxd, vyd
 ! local
-  REAL(reki) :: sy, cy, st, ct, sa, ca, pi, omega
-  REAL(reki), DIMENSION(nbdirs) :: syd, cyd, std, ctd, sad, cad, &
-& omegad
-  REAL(reki), DIMENSION(n) :: cone, sc, cc, x_az, y_az, z_az, sint
-  REAL(reki), DIMENSION(nbdirs, n) :: coned, scd, ccd, x_azd, y_azd, &
+  REAL(dp) :: sy, cy, st, ct, sa, ca, pi, omega
+  REAL(dp), DIMENSION(nbdirs) :: syd, cyd, std, ctd, sad, cad, omegad
+  REAL(dp), DIMENSION(n) :: cone, sc, cc, x_az, y_az, z_az, sint
+  REAL(dp), DIMENSION(nbdirs, n) :: coned, scd, ccd, x_azd, y_azd, &
 & z_azd
-  REAL(reki), DIMENSION(n) :: heightfromhub, v, vwind_x, vwind_y, vrot_x&
-& , vrot_y
-  REAL(reki), DIMENSION(nbdirs, n) :: heightfromhubd, vd, vwind_xd, &
+  REAL(dp), DIMENSION(n) :: heightfromhub, v, vwind_x, vwind_y, vrot_x, &
+& vrot_y
+  REAL(dp), DIMENSION(nbdirs, n) :: heightfromhubd, vd, vwind_xd, &
 & vwind_yd, vrot_xd, vrot_yd
-  INTRINSIC SELECTED_REAL_KIND
+  INTRINSIC KIND
   INTRINSIC SIN
   INTRINSIC COS
-  REAL(reki), DIMENSION(n) :: pwx1
-  REAL(reki), DIMENSION(nbdirs, n) :: pwx1d
-  REAL(reki), DIMENSION(n) :: pwr1
-  REAL(reki), DIMENSION(nbdirs, n) :: pwr1d
+  REAL(dp), DIMENSION(n) :: pwx1
+  REAL(dp), DIMENSION(nbdirs, n) :: pwx1d
+  REAL(dp), DIMENSION(n) :: pwr1
+  REAL(dp), DIMENSION(nbdirs, n) :: pwr1d
   INTEGER :: nd
-  INTEGER :: nbdirs
   sy = SIN(yaw)
   cy = COS(yaw)
   st = SIN(tilt)
   ct = COS(tilt)
   sa = SIN(azimuth)
   ca = COS(azimuth)
-  pi = 3.1415926535897932
-  omega = omegarpm*pi/30.0
+  pi = 3.1415926535897932_dp
+  omega = omegarpm*pi/30.0_dp
   CALL DEFINECURVATURE_DV(n, r, rd, precurve, precurved, presweep, &
 &                   presweepd, precone, preconed, x_az, x_azd, y_az, &
 &                   y_azd, z_az, z_azd, cone, coned, sint, nbdirs)
@@ -773,7 +785,7 @@ SUBROUTINE WINDCOMPONENTS_DV(n, r, rd, precurve, precurved, presweep, &
     ctd(nd) = -(tiltd(nd)*SIN(tilt))
     sad(nd) = azimuthd(nd)*COS(azimuth)
     cad(nd) = -(azimuthd(nd)*SIN(azimuth))
-    omegad(nd) = pi*omegarpmd(nd)/30.0
+    omegad(nd) = pi*omegarpmd(nd)/30.0_dp
     scd(nd, :) = coned(nd, :)*COS(cone)
     ccd(nd, :) = -(coned(nd, :)*SIN(cone))
 ! get section heights in wind-aligned coordinate system
@@ -823,46 +835,46 @@ END SUBROUTINE WINDCOMPONENTS_DV
 !  Differentiation of definecurvature in forward (tangent) mode:
 !   variations   of useful results: z_az y_az x_az cone
 !   with respect to varying inputs: r precurve presweep precone
+
 SUBROUTINE DEFINECURVATURE_DV(n, r, rd, precurve, precurved, presweep, &
 & presweepd, precone, preconed, x_az, x_azd, y_az, y_azd, z_az, z_azd, &
 & cone, coned, s, nbdirs)
-!   USE DIFFSIZES
 !  Hint: nbdirs should be the maximum number of differentiation directions
   IMPLICIT NONE
-  INTEGER, PARAMETER :: reki=SELECTED_REAL_KIND(15, 307)
+  INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
   INTEGER, INTENT(IN) :: n
-  REAL(reki), DIMENSION(n), INTENT(IN) :: r, precurve, presweep
-  REAL(reki), DIMENSION(nbdirs, n), INTENT(IN) :: rd, precurved, &
+  REAL(dp), DIMENSION(n), INTENT(IN) :: r, precurve, presweep
+  REAL(dp), DIMENSION(nbdirs, n), INTENT(IN) :: rd, precurved, &
 & presweepd
-  REAL(reki), INTENT(IN) :: precone
-  REAL(reki), DIMENSION(nbdirs), INTENT(IN) :: preconed
+  REAL(dp), INTENT(IN) :: precone
+  REAL(dp), DIMENSION(nbdirs), INTENT(IN) :: preconed
+  INTEGER, intent(in) :: nbdirs
 ! out
-  REAL(reki), DIMENSION(n), INTENT(OUT) :: x_az, y_az, z_az, cone, s
-  REAL(reki), DIMENSION(nbdirs, n), INTENT(OUT) :: x_azd, y_azd, &
-& z_azd, coned
+  REAL(dp), DIMENSION(n), INTENT(OUT) :: x_az, y_az, z_az, cone, s
+  REAL(dp), DIMENSION(nbdirs, n), INTENT(OUT) :: x_azd, y_azd, z_azd&
+& , coned
 ! local
   INTEGER :: i
-  INTRINSIC SELECTED_REAL_KIND
+  INTRINSIC KIND
   INTRINSIC SIN
   INTRINSIC COS
   INTRINSIC ATAN2
   INTRINSIC SQRT
-  REAL(reki) :: arg1
-  REAL(reki), DIMENSION(nbdirs) :: arg1d
-  REAL(reki) :: arg2
-  REAL(reki), DIMENSION(nbdirs) :: arg2d
-  REAL(reki), DIMENSION(n-2) :: arg10
-  REAL(reki), DIMENSION(nbdirs, n-2) :: arg10d
-  REAL(reki), DIMENSION(n-2) :: arg20
-  REAL(reki), DIMENSION(nbdirs, n-2) :: arg20d
-  REAL(reki), DIMENSION(n-2) :: arg3
-  REAL(reki), DIMENSION(nbdirs, n-2) :: arg3d
-  REAL(reki), DIMENSION(n-2) :: arg4
-  REAL(reki), DIMENSION(nbdirs, n-2) :: arg4d
-  REAL(reki) :: result1
+  REAL(dp) :: arg1
+  REAL(dp), DIMENSION(nbdirs) :: arg1d
+  REAL(dp) :: arg2
+  REAL(dp), DIMENSION(nbdirs) :: arg2d
+  REAL(dp), DIMENSION(n-2) :: arg10
+  REAL(dp), DIMENSION(nbdirs, n-2) :: arg10d
+  REAL(dp), DIMENSION(n-2) :: arg20
+  REAL(dp), DIMENSION(nbdirs, n-2) :: arg20d
+  REAL(dp), DIMENSION(n-2) :: arg3
+  REAL(dp), DIMENSION(nbdirs, n-2) :: arg3d
+  REAL(dp), DIMENSION(n-2) :: arg4
+  REAL(dp), DIMENSION(nbdirs, n-2) :: arg4d
+  REAL(dp) :: result1
   INTEGER :: nd
-  INTEGER :: nbdirs
   x_az = -(r*SIN(precone)) + precurve*COS(precone)
   z_az = r*COS(precone) + precurve*SIN(precone)
   arg1 = -(x_az(2)-x_az(1))
@@ -890,15 +902,16 @@ SUBROUTINE DEFINECURVATURE_DV(n, r, rd, precurve, precurved, presweep, &
     arg20d(nd, :) = z_azd(nd, 2:n-1) - z_azd(nd, 1:n-2)
     arg3d(nd, :) = -(x_azd(nd, 3:n)-x_azd(nd, 2:n-1))
     arg4d(nd, :) = z_azd(nd, 3:n) - z_azd(nd, 2:n-1)
-    coned(nd, 2:n-1) = 0.5*((arg10d(nd, :)*arg20(:)-arg20d(nd, :)*arg10(&
-&     :))/(arg10(:)**2+arg20(:)**2)+(arg3d(nd, :)*arg4(:)-arg4d(nd, :)*&
-&     arg3(:))/(arg3(:)**2+arg4(:)**2))
+    coned(nd, 2:n-1) = 0.5_dp*((arg10d(nd, :)*arg20(:)-arg20d(nd, :)*&
+&     arg10(:))/(arg10(:)**2+arg20(:)**2)+(arg3d(nd, :)*arg4(:)-arg4d(nd&
+&     , :)*arg3(:))/(arg3(:)**2+arg4(:)**2))
     arg1d(nd) = -(x_azd(nd, n)-x_azd(nd, n-1))
     arg2d(nd) = z_azd(nd, n) - z_azd(nd, n-1)
   END DO
   y_az = presweep
   cone(1) = ATAN2(arg1, arg2)
-  cone(2:n-1) = 0.5*(ATAN2(arg10(:), arg20(:))+ATAN2(arg3(:), arg4(:)))
+  cone(2:n-1) = 0.5_dp*(ATAN2(arg10(:), arg20(:))+ATAN2(arg3(:), arg4(:)&
+&   ))
   arg1 = -(x_az(n)-x_az(n-1))
   arg2 = z_az(n) - z_az(n-1)
   DO nd=1,nbdirs
@@ -906,7 +919,7 @@ SUBROUTINE DEFINECURVATURE_DV(n, r, rd, precurve, precurved, presweep, &
   END DO
   cone(n) = ATAN2(arg1, arg2)
 ! total path length of blade
-  s(1) = 0.0
+  s(1) = 0.0_dp
   DO i=2,n
     arg1 = (precurve(i)-precurve(i-1))**2 + (presweep(i)-presweep(i-1))&
 &     **2 + (r(i)-r(i-1))**2
@@ -921,7 +934,7 @@ END SUBROUTINE DEFINECURVATURE_DV
 
 
 !        Generated by TAPENADE     (INRIA, Tropics team)
-!  Tapenade 3.7 (r4888) - 28 May 2013 10:47
+!  Tapenade 3.9 (r5096) - 24 Feb 2014 16:54
 !
 !  Differentiation of thrusttorque in reverse (adjoint) mode:
 !   gradient     of useful results: q t
@@ -930,65 +943,64 @@ END SUBROUTINE DEFINECURVATURE_DV
 !   RW status of diff variables: tp:out precurvetip:out q:in-out
 !                r:out t:in-zero rtip:out np:out precurve:out presweep:out
 !                presweeptip:out rhub:out precone:out
+
 SUBROUTINE THRUSTTORQUE_BV(n, np, tp, r, precurve, presweep, precone, &
   rhub, rtip, precurvetip, presweeptip, tb, qb, &
   npb, tpb, rb, precurveb, presweepb, preconeb, rhubb, rtipb, &
   precurvetipb, presweeptipb, nbdirs)
-
 !  Hint: nbdirsmax should be the maximum number of differentiation directions
   IMPLICIT NONE
-  INTEGER, PARAMETER :: reki=SELECTED_REAL_KIND(15, 307)
+  INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
   INTEGER, INTENT(IN) :: n
+  REAL(dp), DIMENSION(n), INTENT(IN) :: np, tp, r, precurve, presweep
+  REAL(dp), INTENT(IN) :: precone, rhub, rtip, precurvetip, presweeptip
+  REAL(dp), DIMENSION(nbdirs), intent(in) :: tb, qb
   INTEGER, intent(in) :: nbdirs
-  REAL(reki), DIMENSION(n), INTENT(IN) :: np, tp, r, precurve, presweep
-  REAL(reki), DIMENSION(nbdirs, n), intent(out) :: npb, tpb, rb, precurveb, &
-&  presweepb
-  REAL(reki), INTENT(IN) :: precone, rhub, rtip, precurvetip, &
-&  presweeptip
-  REAL(reki), DIMENSION(nbdirs), intent(out) :: preconeb, rhubb, rtipb, &
-&  precurvetipb, presweeptipb
 ! out
-  !REAL(reki) :: t, q
-  REAL(reki), DIMENSION(nbdirs), intent(in) :: tb, qb
+!   REAL(dp) :: t, q
+  REAL(dp), DIMENSION(nbdirs, n), intent(out) :: npb, tpb, rb, precurveb, &
+& presweepb
+  REAL(dp), DIMENSION(nbdirs), intent(out) :: preconeb, rhubb, rtipb, precurvetipb&
+& , presweeptipb
 ! local
-  REAL(reki) :: ds
-  REAL(reki), DIMENSION(nbdirs) :: dsb
-  REAL(reki), DIMENSION(n + 2) :: rfull, curvefull, sweepfull, npfull, &
-&  tpfull
-  REAL(reki), DIMENSION(nbdirs, n+2) :: rfullb, curvefullb, &
-&  sweepfullb, npfullb, tpfullb
-  REAL(reki), DIMENSION(n + 2) :: thrust, torque, x_az, y_az, z_az, cone&
-&  , s
-  REAL(reki), DIMENSION(nbdirs, n+2) :: thrustb, torqueb, x_azb, &
-&  z_azb, coneb, sb
+  REAL(dp) :: ds
+  REAL(dp), DIMENSION(nbdirs) :: dsb
+  REAL(dp), DIMENSION(n + 2) :: rfull, curvefull, sweepfull, npfull, &
+& tpfull
+  REAL(dp), DIMENSION(nbdirs, n+2) :: rfullb, curvefullb, sweepfullb&
+& , npfullb, tpfullb
+  REAL(dp), DIMENSION(n + 2) :: thrust, torque, x_az, y_az, z_az, cone, &
+& s
+  REAL(dp), DIMENSION(nbdirs, n+2) :: thrustb, torqueb, x_azb, z_azb&
+& , coneb, sb
   INTEGER :: i
+  INTRINSIC KIND
+  INTRINSIC COS
   INTEGER :: arg1
   INTEGER :: nd
-  INTRINSIC COS
-  REAL(reki) :: tempb0(nbdirs)
-  REAL(reki) :: tempb(nbdirs)
-  INTRINSIC SELECTED_REAL_KIND
+  REAL(dp) :: tempb0(nbdirs)
+  REAL(dp) :: tempb(nbdirs)
 ! add hub/tip for complete integration.  loads go to zero at hub/tip.
   rfull(1) = rhub
   rfull(2:n+1) = r
   rfull(n+2) = rtip
-  curvefull(1) = 0.0
+  curvefull(1) = 0.0_dp
   curvefull(2:n+1) = precurve
   curvefull(n+2) = precurvetip
-  sweepfull(1) = 0
+  sweepfull(1) = 0.0_dp
   sweepfull(2:n+1) = presweep
   sweepfull(n+2) = presweeptip
-  npfull(1) = 0.0
+  npfull(1) = 0.0_dp
   npfull(2:n+1) = np
-  npfull(n+2) = 0.0
-  tpfull(1) = 0.0
+  npfull(n+2) = 0.0_dp
+  tpfull(1) = 0.0_dp
   tpfull(2:n+1) = tp
-  tpfull(n+2) = 0.0
+  tpfull(n+2) = 0.0_dp
 ! get z_az and total cone angle
   arg1 = n + 2
   CALL DEFINECURVATURE(arg1, rfull, curvefull, sweepfull, precone, x_az&
-&                 , y_az, z_az, cone, s)
+&                , y_az, z_az, cone, s)
 ! integrate Thrust and Torque (trapezoidal)
   thrust = npfull*COS(cone)
   torque = tpfull*z_az
@@ -1000,12 +1012,12 @@ SUBROUTINE THRUSTTORQUE_BV(n, np, tp, r, precurve, presweep, precone, &
   DO i=n+1,1,-1
     ds = s(i+1) - s(i)
     DO nd=1,nbdirs
-      tempb(nd) = 0.5*ds*qb(nd)
+      tempb(nd) = 0.5_dp*ds*qb(nd)
       torqueb(nd, i) = torqueb(nd, i) + tempb(nd)
       torqueb(nd, i+1) = torqueb(nd, i+1) + tempb(nd)
-      dsb(nd) = 0.5*(thrust(i)+thrust(i+1))*tb(nd) + 0.5*(torque(i)+&
-&        torque(i+1))*qb(nd)
-      tempb0(nd) = 0.5*ds*tb(nd)
+      dsb(nd) = 0.5_dp*(thrust(i)+thrust(i+1))*tb(nd) + 0.5_dp*(torque(i&
+&       )+torque(i+1))*qb(nd)
+      tempb0(nd) = 0.5_dp*ds*tb(nd)
       thrustb(nd, i) = thrustb(nd, i) + tempb0(nd)
       thrustb(nd, i+1) = thrustb(nd, i+1) + tempb0(nd)
       sb(nd, i+1) = sb(nd, i+1) + dsb(nd)
@@ -1032,9 +1044,9 @@ SUBROUTINE THRUSTTORQUE_BV(n, np, tp, r, precurve, presweep, precone, &
     rb(nd, :) = 0.0
   END DO
   CALL DEFINECURVATURE_BV(arg1, rfull, rfullb, curvefull, curvefullb, &
-&                    sweepfull, sweepfullb, precone, preconeb, x_az, &
-&                    x_azb, z_az, z_azb, coneb, sb, nbdirs&
-&                   )
+&                   sweepfull, sweepfullb, precone, preconeb, x_az, &
+&                   x_azb, y_az, z_az, z_azb, cone, coneb, s, sb, nbdirs&
+&                  )
   DO nd=1,nbdirs
     presweeptipb(nd) = sweepfullb(nd, n+2)
     sweepfullb(nd, n+2) = 0.0
@@ -1048,54 +1060,54 @@ SUBROUTINE THRUSTTORQUE_BV(n, np, tp, r, precurve, presweep, precone, &
     rfullb(nd, 2:n+1) = 0.0
     rhubb(nd) = rfullb(nd, 1)
   END DO
-  !DO nd=1,nbdirs
-  !  tb(nd) = 0.0
-  !END DO
+!   DO nd=1,nbdirs
+!     tb(nd) = 0.0
+!   END DO
 END SUBROUTINE THRUSTTORQUE_BV
 
 !  Differentiation of definecurvature in reverse (adjoint) mode:
 !   gradient     of useful results: s z_az cone
 !   with respect to varying inputs: r precurve presweep precone
-SUBROUTINE DEFINECURVATURE_BV(n, r, rb, precurve, precurveb, presweep, &
-&  presweepb, precone, preconeb, x_az, x_azb, z_az, z_azb, &
-&  coneb, sb, nbdirs)
 
+SUBROUTINE DEFINECURVATURE_BV(n, r, rb, precurve, precurveb, presweep, &
+& presweepb, precone, preconeb, x_az, x_azb, y_az, z_az, z_azb, cone, &
+& coneb, s, sb, nbdirs)
 !  Hint: nbdirsmax should be the maximum number of differentiation directions
   IMPLICIT NONE
-  INTEGER, PARAMETER :: reki=SELECTED_REAL_KIND(15, 307)
+  INTEGER, PARAMETER :: dp=KIND(0.d0)
 ! in
   INTEGER, INTENT(IN) :: n
+  REAL(dp), DIMENSION(n), INTENT(IN) :: r, precurve, presweep
+  REAL(dp), DIMENSION(nbdirs, n) :: rb, precurveb, presweepb
+  REAL(dp), INTENT(IN) :: precone
+  REAL(dp), DIMENSION(nbdirs) :: preconeb
   INTEGER, intent(in) :: nbdirs
-  REAL(reki), DIMENSION(n), INTENT(IN) :: r, precurve, presweep
-  REAL(reki), DIMENSION(nbdirs, n) :: rb, precurveb, presweepb
-  REAL(reki), INTENT(IN) :: precone
-  REAL(reki), DIMENSION(nbdirs) :: preconeb
 ! out
-  REAL(reki), DIMENSION(n) :: x_az, z_az!,y_az, cone, s
-  REAL(reki), DIMENSION(nbdirs, n) :: x_azb, z_azb, coneb, sb
+  REAL(dp), DIMENSION(n) :: x_az, y_az, z_az, cone, s
+  REAL(dp), DIMENSION(nbdirs, n) :: x_azb, z_azb, coneb, sb
 ! local
   INTEGER :: i
-  INTEGER :: nd
-  REAL(reki) :: temp0(n-2)
-  INTRINSIC COS
+  INTRINSIC KIND
   INTRINSIC SIN
-  REAL(reki) :: tempb2(nbdirs)
-  REAL(reki) :: tempb1(nbdirs)
-  REAL(reki) :: tempb0(nbdirs, n-2)
-  REAL(reki) :: temp0b(nbdirs, n-2)
+  INTRINSIC COS
   INTRINSIC ATAN2
-  REAL(reki) :: tempb(nbdirs, n)
-  INTRINSIC SELECTED_REAL_KIND
-  REAL(reki) :: temp1b(nbdirs)
-  REAL(reki) :: temp1b6(nbdirs)
   INTRINSIC SQRT
-  REAL(reki) :: temp(n-2)
-  REAL(reki) :: temp1b5(nbdirs)
-  REAL(reki) :: temp1b4(nbdirs)
-  REAL(reki) :: temp1b3(nbdirs)
-  REAL(reki) :: temp1b2(nbdirs, n-2)
-  REAL(reki) :: temp1b1(nbdirs, n-2)
-  REAL(reki) :: temp1b0(nbdirs)
+  INTEGER :: nd
+  REAL(dp) :: temp0(n-2)
+  REAL(dp) :: tempb9(nbdirs)
+  REAL(dp) :: tempb8(nbdirs)
+  REAL(dp) :: tempb7(nbdirs)
+  REAL(dp) :: tempb6(nbdirs)
+  REAL(dp) :: tempb5(nbdirs, n-2)
+  REAL(dp) :: tempb4(nbdirs, n-2)
+  REAL(dp) :: tempb3(nbdirs, n-2)
+  REAL(dp) :: tempb2(nbdirs, n-2)
+  REAL(dp) :: tempb1(nbdirs, n)
+  REAL(dp) :: tempb0(nbdirs)
+  REAL(dp) :: tempb11(nbdirs)
+  REAL(dp) :: tempb10(nbdirs)
+  REAL(dp) :: tempb(nbdirs)
+  REAL(dp) :: temp(n-2)
 ! coordinate in azimuthal coordinate system
 ! az_coords = DirectionVector(precurve, presweep, r).bladeToAzimuth(precone)
   x_az = -(r*SIN(precone)) + precurve*COS(precone)
@@ -1110,22 +1122,22 @@ SUBROUTINE DEFINECURVATURE_BV(n, r, rb, precurve, precurveb, presweep, &
   DO i=n,2,-1
     DO nd=1,nbdirs
       IF ((precurve(i)-precurve(i-1))**2 + (presweep(i)-presweep(i-1))**&
-&          2 + (r(i)-r(i-1))**2 .EQ. 0.0) THEN
-        temp1b3(nd) = 0.0
+&         2 + (r(i)-r(i-1))**2 .EQ. 0.0) THEN
+        tempb8(nd) = 0.0
       ELSE
-        temp1b3(nd) = sb(nd, i)/(2.0*SQRT((precurve(i)-precurve(i-1))**2&
-&          +(presweep(i)-presweep(i-1))**2+(r(i)-r(i-1))**2))
+        tempb8(nd) = sb(nd, i)/(2.0*SQRT((precurve(i)-precurve(i-1))**2+&
+&         (presweep(i)-presweep(i-1))**2+(r(i)-r(i-1))**2))
       END IF
-      temp1b4(nd) = 2*(precurve(i)-precurve(i-1))*temp1b3(nd)
-      temp1b5(nd) = 2*(presweep(i)-presweep(i-1))*temp1b3(nd)
-      temp1b6(nd) = 2*(r(i)-r(i-1))*temp1b3(nd)
+      tempb9(nd) = 2*(precurve(i)-precurve(i-1))*tempb8(nd)
+      tempb10(nd) = 2*(presweep(i)-presweep(i-1))*tempb8(nd)
+      tempb11(nd) = 2*(r(i)-r(i-1))*tempb8(nd)
       sb(nd, i-1) = sb(nd, i-1) + sb(nd, i)
-      precurveb(nd, i) = precurveb(nd, i) + temp1b4(nd)
-      precurveb(nd, i-1) = precurveb(nd, i-1) - temp1b4(nd)
-      presweepb(nd, i) = presweepb(nd, i) + temp1b5(nd)
-      presweepb(nd, i-1) = presweepb(nd, i-1) - temp1b5(nd)
-      rb(nd, i) = rb(nd, i) + temp1b6(nd)
-      rb(nd, i-1) = rb(nd, i-1) - temp1b6(nd)
+      precurveb(nd, i) = precurveb(nd, i) + tempb9(nd)
+      precurveb(nd, i-1) = precurveb(nd, i-1) - tempb9(nd)
+      presweepb(nd, i) = presweepb(nd, i) + tempb10(nd)
+      presweepb(nd, i-1) = presweepb(nd, i-1) - tempb10(nd)
+      rb(nd, i) = rb(nd, i) + tempb11(nd)
+      rb(nd, i-1) = rb(nd, i-1) - tempb11(nd)
       sb(nd, i) = 0.0
     END DO
   END DO
@@ -1133,44 +1145,164 @@ SUBROUTINE DEFINECURVATURE_BV(n, r, rb, precurve, precurveb, presweep, &
   temp = x_az(1:n-2) - x_az(2:n-1)
   DO nd=1,nbdirs
     x_azb(nd, :) = 0.0
-    temp1b(nd) = (z_az(n)-z_az(n-1))*coneb(nd, n)/((x_az(n-1)-x_az(n))**&
-&      2+(z_az(n)-z_az(n-1))**2)
-    temp1b0(nd) = -((x_az(n-1)-x_az(n))*coneb(nd, n)/((x_az(n-1)-x_az(n)&
-&      )**2+(z_az(n)-z_az(n-1))**2))
-    x_azb(nd, n-1) = x_azb(nd, n-1) + temp1b(nd)
-    x_azb(nd, n) = x_azb(nd, n) - temp1b(nd)
-    z_azb(nd, n) = z_azb(nd, n) + temp1b0(nd)
-    z_azb(nd, n-1) = z_azb(nd, n-1) - temp1b0(nd)
+    tempb(nd) = (z_az(n)-z_az(n-1))*coneb(nd, n)/((x_az(n-1)-x_az(n))**2&
+&     +(z_az(n)-z_az(n-1))**2)
+    tempb0(nd) = -((x_az(n-1)-x_az(n))*coneb(nd, n)/((x_az(n-1)-x_az(n))&
+&     **2+(z_az(n)-z_az(n-1))**2))
+    x_azb(nd, n-1) = x_azb(nd, n-1) + tempb(nd)
+    x_azb(nd, n) = x_azb(nd, n) - tempb(nd)
+    z_azb(nd, n) = z_azb(nd, n) + tempb0(nd)
+    z_azb(nd, n-1) = z_azb(nd, n-1) - tempb0(nd)
     coneb(nd, n) = 0.0
-    tempb(nd, :) = 0.5*coneb(nd, 2:n-1)
-    tempb0(nd, :) = temp0*tempb(nd, :)/(temp**2+temp0**2)
-    temp0b(nd, :) = -(temp*tempb(nd, :)/(temp**2+temp0**2))
-    temp1b1(nd, :) = (z_az(3:n)-z_az(2:n-1))*tempb(nd, :)/((x_az(2:n-1)-&
-&      x_az(3:n))**2+(z_az(3:n)-z_az(2:n-1))**2)
-    temp1b2(nd, :) = -((x_az(2:n-1)-x_az(3:n))*tempb(nd, :)/((x_az(2:n-1&
-&      )-x_az(3:n))**2+(z_az(3:n)-z_az(2:n-1))**2))
-    x_azb(nd, 1:n-2) = x_azb(nd, 1:n-2) + tempb0(nd, :)
-    x_azb(nd, 2:n-1) = x_azb(nd, 2:n-1) + temp1b1(nd, :) - tempb0(nd, :)
-    z_azb(nd, 2:n-1) = z_azb(nd, 2:n-1) + temp0b(nd, :) - temp1b2(nd, :)
-    z_azb(nd, 1:n-2) = z_azb(nd, 1:n-2) - temp0b(nd, :)
-    x_azb(nd, 3:n) = x_azb(nd, 3:n) - temp1b1(nd, :)
-    z_azb(nd, 3:n) = z_azb(nd, 3:n) + temp1b2(nd, :)
+    tempb1(nd, :) = 0.5_dp*coneb(nd, 2:n-1)
+    tempb2(nd, :) = temp0*tempb1(nd, :)/(temp**2+temp0**2)
+    tempb3(nd, :) = -(temp*tempb1(nd, :)/(temp**2+temp0**2))
+    tempb4(nd, :) = (z_az(3:n)-z_az(2:n-1))*tempb1(nd, :)/((x_az(2:n-1)-&
+&     x_az(3:n))**2+(z_az(3:n)-z_az(2:n-1))**2)
+    tempb5(nd, :) = -((x_az(2:n-1)-x_az(3:n))*tempb1(nd, :)/((x_az(2:n-1&
+&     )-x_az(3:n))**2+(z_az(3:n)-z_az(2:n-1))**2))
+    x_azb(nd, 1:n-2) = x_azb(nd, 1:n-2) + tempb2(nd, :)
+    x_azb(nd, 2:n-1) = x_azb(nd, 2:n-1) + tempb4(nd, :) - tempb2(nd, :)
+    z_azb(nd, 2:n-1) = z_azb(nd, 2:n-1) + tempb3(nd, :) - tempb5(nd, :)
+    z_azb(nd, 1:n-2) = z_azb(nd, 1:n-2) - tempb3(nd, :)
+    x_azb(nd, 3:n) = x_azb(nd, 3:n) - tempb4(nd, :)
+    z_azb(nd, 3:n) = z_azb(nd, 3:n) + tempb5(nd, :)
     coneb(nd, 2:n-1) = 0.0
-    tempb1(nd) = (z_az(2)-z_az(1))*coneb(nd, 1)/((x_az(1)-x_az(2))**2+(&
-&      z_az(2)-z_az(1))**2)
-    tempb2(nd) = -((x_az(1)-x_az(2))*coneb(nd, 1)/((x_az(1)-x_az(2))**2+&
-&      (z_az(2)-z_az(1))**2))
-    x_azb(nd, 1) = x_azb(nd, 1) + tempb1(nd)
-    x_azb(nd, 2) = x_azb(nd, 2) - tempb1(nd)
-    z_azb(nd, 2) = z_azb(nd, 2) + tempb2(nd)
-    z_azb(nd, 1) = z_azb(nd, 1) - tempb2(nd)
+    tempb6(nd) = (z_az(2)-z_az(1))*coneb(nd, 1)/((x_az(1)-x_az(2))**2+(&
+&     z_az(2)-z_az(1))**2)
+    tempb7(nd) = -((x_az(1)-x_az(2))*coneb(nd, 1)/((x_az(1)-x_az(2))**2+&
+&     (z_az(2)-z_az(1))**2))
+    x_azb(nd, 1) = x_azb(nd, 1) + tempb6(nd)
+    x_azb(nd, 2) = x_azb(nd, 2) - tempb6(nd)
+    z_azb(nd, 2) = z_azb(nd, 2) + tempb7(nd)
+    z_azb(nd, 1) = z_azb(nd, 1) - tempb7(nd)
     rb(nd, :) = rb(nd, :) + COS(precone)*z_azb(nd, :) - SIN(precone)*&
-&      x_azb(nd, :)
+&     x_azb(nd, :)
     preconeb(nd) = COS(precone)*SUM(precurve*z_azb(nd, :)) - SIN(precone&
-&      )*SUM(precurve*x_azb(nd, :)) - COS(precone)*SUM(r*x_azb(nd, :)) - &
-&      SIN(precone)*SUM(r*z_azb(nd, :))
+&     )*SUM(precurve*x_azb(nd, :)) - COS(precone)*SUM(r*x_azb(nd, :)) - &
+&     SIN(precone)*SUM(r*z_azb(nd, :))
     precurveb(nd, :) = precurveb(nd, :) + COS(precone)*x_azb(nd, :) + &
-&      SIN(precone)*z_azb(nd, :)
+&     SIN(precone)*z_azb(nd, :)
   END DO
 END SUBROUTINE DEFINECURVATURE_BV
+
+
+
+!        Generated by TAPENADE     (INRIA, Tropics team)
+!  Tapenade 3.9 (r5096) - 24 Feb 2014 16:54
+!
+!  Differentiation of definecurvature in forward (tangent) mode:
+!   variations   of useful results: s z_az y_az x_az cone
+!   with respect to varying inputs: r precurve presweep precone
+!   RW status of diff variables: r:in s:out precurve:in z_az:out
+!                presweep:in y_az:out x_az:out cone:out precone:in
+
+SUBROUTINE DEFINECURVATURE_DV2(n, r, rd, precurve, precurved, presweep, &
+& presweepd, precone, preconed, x_az, x_azd, y_az, y_azd, z_az, z_azd, &
+& cone, coned, s, sd, nbdirs)
+!   USE DIFFSIZES
+!  Hint: nbdirsmax should be the maximum number of differentiation directions
+  IMPLICIT NONE
+  INTEGER, PARAMETER :: dp=KIND(0.d0)
+! in
+  INTEGER, INTENT(IN) :: n
+  REAL(dp), DIMENSION(n), INTENT(IN) :: r, precurve, presweep
+  REAL(dp), DIMENSION(nbdirs, n), INTENT(IN) :: rd, precurved, presweepd
+  INTEGER, intent(in) :: nbdirs
+  REAL(dp), INTENT(IN) :: precone
+  REAL(dp), DIMENSION(nbdirs), INTENT(IN) :: preconed
+! out
+  REAL(dp), DIMENSION(n), INTENT(OUT) :: x_az, y_az, z_az, cone, s
+  REAL(dp), DIMENSION(nbdirs, n), INTENT(OUT) :: x_azd, y_azd, z_azd&
+& , coned, sd
+! local
+  INTEGER :: i
+  INTRINSIC KIND
+  INTRINSIC SIN
+  INTRINSIC COS
+  INTRINSIC ATAN2
+  INTRINSIC SQRT
+  REAL(dp) :: arg1
+  REAL(dp), DIMENSION(nbdirs) :: arg1d
+  REAL(dp) :: arg2
+  REAL(dp), DIMENSION(nbdirs) :: arg2d
+  REAL(dp), DIMENSION(n-2) :: arg10
+  REAL(dp), DIMENSION(nbdirs, n-2) :: arg10d
+  REAL(dp), DIMENSION(n-2) :: arg20
+  REAL(dp), DIMENSION(nbdirs, n-2) :: arg20d
+  REAL(dp), DIMENSION(n-2) :: arg3
+  REAL(dp), DIMENSION(nbdirs, n-2) :: arg3d
+  REAL(dp), DIMENSION(n-2) :: arg4
+  REAL(dp), DIMENSION(nbdirs, n-2) :: arg4d
+  REAL(dp) :: result1
+  REAL(dp), DIMENSION(nbdirs) :: result1d
+  INTEGER :: nd
+  x_az = -(r*SIN(precone)) + precurve*COS(precone)
+  z_az = r*COS(precone) + precurve*SIN(precone)
+  arg1 = -(x_az(2)-x_az(1))
+  arg2 = z_az(2) - z_az(1)
+  arg10(:) = -(x_az(2:n-1)-x_az(1:n-2))
+  arg20(:) = z_az(2:n-1) - z_az(1:n-2)
+  arg3(:) = -(x_az(3:n)-x_az(2:n-1))
+  arg4(:) = z_az(3:n) - z_az(2:n-1)
+  DO nd=1,nbdirs
+! coordinate in azimuthal coordinate system
+! az_coords = DirectionVector(precurve, presweep, r).bladeToAzimuth(precone)
+    x_azd(nd, :) = precurved(nd, :)*COS(precone) - r*preconed(nd)*COS(&
+&     precone) - rd(nd, :)*SIN(precone) - precurve*preconed(nd)*SIN(&
+&     precone)
+    z_azd(nd, :) = rd(nd, :)*COS(precone) - r*preconed(nd)*SIN(precone) &
+&     + precurved(nd, :)*SIN(precone) + precurve*preconed(nd)*COS(&
+&     precone)
+    y_azd(nd, :) = presweepd(nd, :)
+! compute total coning angle for purposes of relative velocity
+    arg1d(nd) = -(x_azd(nd, 2)-x_azd(nd, 1))
+    arg2d(nd) = z_azd(nd, 2) - z_azd(nd, 1)
+    coned(nd, :) = 0.0
+    coned(nd, 1) = (arg1d(nd)*arg2-arg2d(nd)*arg1)/(arg1**2+arg2**2)
+    arg10d(nd, :) = -(x_azd(nd, 2:n-1)-x_azd(nd, 1:n-2))
+    arg20d(nd, :) = z_azd(nd, 2:n-1) - z_azd(nd, 1:n-2)
+    arg3d(nd, :) = -(x_azd(nd, 3:n)-x_azd(nd, 2:n-1))
+    arg4d(nd, :) = z_azd(nd, 3:n) - z_azd(nd, 2:n-1)
+    coned(nd, 2:n-1) = 0.5_dp*((arg10d(nd, :)*arg20(:)-arg20d(nd, :)*&
+&     arg10(:))/(arg10(:)**2+arg20(:)**2)+(arg3d(nd, :)*arg4(:)-arg4d(nd&
+&     , :)*arg3(:))/(arg3(:)**2+arg4(:)**2))
+    arg1d(nd) = -(x_azd(nd, n)-x_azd(nd, n-1))
+    arg2d(nd) = z_azd(nd, n) - z_azd(nd, n-1)
+! total path length of blade
+    sd(nd, 1) = 0.0
+  END DO
+  y_az = presweep
+  cone(1) = ATAN2(arg1, arg2)
+  cone(2:n-1) = 0.5_dp*(ATAN2(arg10(:), arg20(:))+ATAN2(arg3(:), arg4(:)&
+&   ))
+  arg1 = -(x_az(n)-x_az(n-1))
+  arg2 = z_az(n) - z_az(n-1)
+  DO nd=1,nbdirs
+    coned(nd, n) = (arg1d(nd)*arg2-arg2d(nd)*arg1)/(arg1**2+arg2**2)
+  END DO
+  cone(n) = ATAN2(arg1, arg2)
+  s(1) = 0.0_dp
+  DO nd=1,nbdirs
+    sd(nd, :) = 0.0
+  END DO
+  DO i=2,n
+    arg1 = (precurve(i)-precurve(i-1))**2 + (presweep(i)-presweep(i-1))&
+&     **2 + (r(i)-r(i-1))**2
+    DO nd=1,nbdirs
+      arg1d(nd) = 2*(precurve(i)-precurve(i-1))*(precurved(nd, i)-&
+&       precurved(nd, i-1)) + 2*(presweep(i)-presweep(i-1))*(presweepd(&
+&       nd, i)-presweepd(nd, i-1)) + 2*(r(i)-r(i-1))*(rd(nd, i)-rd(nd, i&
+&       -1))
+      IF (arg1 .EQ. 0.0) THEN
+        result1d(nd) = 0.0
+      ELSE
+        result1d(nd) = arg1d(nd)/(2.0*SQRT(arg1))
+      END IF
+      sd(nd, i) = sd(nd, i-1) + result1d(nd)
+    END DO
+    result1 = SQRT(arg1)
+    s(i) = s(i-1) + result1
+  END DO
+END SUBROUTINE DEFINECURVATURE_DV2
 

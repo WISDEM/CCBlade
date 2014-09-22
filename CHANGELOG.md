@@ -1,5 +1,12 @@
 # CCBlade Changelog
 
+## 1.1.1 (Apr 15, 2013)
+
+Andrew Ning <andrew.ning@nrel.gov>
+
+[FIX]: improvement to the behavior of the function and its derivative near a singularity that can exist in the Glauert region.
+
+
 ## 1.1.0 (Jan 10, 2013)
 
 Andrew Ning <andrew.ning@nrel.gov>

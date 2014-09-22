@@ -8,7 +8,7 @@ from numpy.distutils.core import setup, Extension
 
 setup(
     name='CCBlade',
-    version='1.1.0',
+    version='1.1.1',
     description='Blade element momentum aerodynamics for wind turbines',
     author='S. Andrew Ning',
     author_email='andrew.ning@nrel.gov',
@@ -18,6 +18,6 @@ setup(
     # test_suite='test.test_ccblade.py',
     license='Apache License, Version 2.0',
     ext_modules=[Extension('_bem', ['src/bem.f90'], extra_compile_args=['-O2'])],
-    dependency_links=['https://github.com/NREL-WISDEM/AirfoilPreppy/tarball/master#egg=airfoilprep.py-0.1'],
+    dependency_links=['https://github.com/WISDEM/AirfoilPreppy/tarball/master#egg=airfoilprep.py-0.1'],
     zip_safe=False
 )

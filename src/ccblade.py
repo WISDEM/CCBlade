@@ -168,8 +168,8 @@ class CCAirfoil:
 
         """
 
-        cl = self.cl_spline.ev(alpha, Re)[0]
-        cd = self.cd_spline.ev(alpha, Re)[0]
+        cl = self.cl_spline.ev(alpha, Re)
+        cd = self.cd_spline.ev(alpha, Re)
 
         return cl, cd
 
@@ -1065,9 +1065,7 @@ if __name__ == '__main__':
     azimuth = 90
 
     # evaluate distributed loads
-    Np, Tp= aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
-
-
+    Np, Tp = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
 
     # plot
     import matplotlib.pyplot as plt
