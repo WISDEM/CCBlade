@@ -2,9 +2,9 @@ A blade element momentum method for analyzing wind turbine aerodynamic performan
 
 Author: [S. Andrew Ning](mailto:andrew.ning@nrel.gov)
 
-## User Information
+## Detailed Documentation
 
-If you came to this page directly without going through the NWTC Information Portal, **we would appreciate if you could [report your user information](http://wind.nrel.gov/designcodes/simulators/ccblade/downloaders/CCBlade_github_redirect.html) before cloning the repository**.  We use this information in order to allocate resources for supporting our software, and to notify users of critical updates.
+Open a local copy of the documentation at `docs/_build/html/index.html`.  Or access the online version at <http://wisdem.github.io/CCBlade/>
 
 ## Prerequisites
 
@@ -25,8 +25,5 @@ To check if installation was successful, run the unit tests
     $ python test/test_ccblade.py
     $ python test/test_gradients.py
 
-## Detailed Documentation
-
-Open a local copy of the documentation at `docs/_build/html/index.html`.  Or access the online version at <http://wisdem.github.io/CCBlade/>
-
+For software issues please use <https://github.com/WISDEM/CCBlade/issues>.  For functionality and theory related questions and comments please use the NWTC forum for [Systems Engineering Software Questions](https://wind.nrel.gov/forum/wind/viewtopic.php?f=34&t=1002).
 
