@@ -140,7 +140,7 @@ class CCAirfoil:
         """
 
         af = Airfoil.initFromAerodynFile(aerodynFile)
-        alpha, Re, cl, cd = af.createDataGrid()
+        alpha, Re, cl, cd, cm = af.createDataGrid()
         return cls(alpha, Re, cl, cd)
 
 
