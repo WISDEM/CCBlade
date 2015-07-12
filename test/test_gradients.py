@@ -376,8 +376,8 @@ class TestGradients(unittest.TestCase):
         dNp_dRhub_fd[:, 0] = (Npd - self.Np) / delta
         dTp_dRhub_fd[:, 0] = (Tpd - self.Tp) / delta
 
-        np.testing.assert_allclose(dNp_dRhub_fd, dNp_dRhub, rtol=1e-5, atol=1e-7)
-        np.testing.assert_allclose(dTp_dRhub_fd, dTp_dRhub, rtol=1e-4, atol=1e-7)
+        np.testing.assert_allclose(dNp_dRhub_fd, dNp_dRhub, rtol=1e-5, atol=1e-6)
+        np.testing.assert_allclose(dTp_dRhub_fd, dTp_dRhub, rtol=1e-4, atol=1e-6)
 
 
     def test_dRhub2(self):
@@ -543,8 +543,8 @@ class TestGradients(unittest.TestCase):
         dNp_dprecone_fd[:, 0] = (Npd - self.Np) / delta
         dTp_dprecone_fd[:, 0] = (Tpd - self.Tp) / delta
 
-        np.testing.assert_allclose(dNp_dprecone_fd, dNp_dprecone, rtol=1e-6, atol=1e-8)
-        np.testing.assert_allclose(dTp_dprecone_fd, dTp_dprecone, rtol=1e-6, atol=1e-8)
+        np.testing.assert_allclose(dNp_dprecone_fd, dNp_dprecone, rtol=1e-5, atol=1e-7)
+        np.testing.assert_allclose(dTp_dprecone_fd, dTp_dprecone, rtol=1e-5, atol=1e-7)
 
 
 
