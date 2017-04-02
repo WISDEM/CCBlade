@@ -13,12 +13,13 @@ Fortran compiler, NumPy, SciPy, zope.interface
 ## Installation
 
 Install CCBlade with the following command. It is recommended to use a clean virtual environment. However, we need to install Numpy manually as CCBlade uses its enhanced distutils in order to compile the Fortran routines. Pip will take care of other dependencies.
+```
     $ virtualenv devenv
     $ source devenv/bin/activate
     (devenv)$ pip install numpy==1.12.1
     (devenv)$ pip install -r requirements.txt
     (devenv)$ ccblade
-
+```
 Note that the installation also includes AirfoilPrep.py.  Though not strictly necessary to use with CCBlade, it is convenient when working with AeroDyn input files or doing any aerodynamic preprocessing of airfoil data.
 
 ## Run Unit Tests
