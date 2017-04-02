@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from setuptools import setup
+from setuptools import setup, find_packages
 from numpy.distutils.core import setup, Extension
 
 
@@ -12,12 +12,22 @@ setup(
     description='Blade element momentum aerodynamics for wind turbines',
     author='S. Andrew Ning',
     author_email='andrew.ning@nrel.gov',
-    package_dir={'': 'src'},
-    py_modules=['ccblade'],
-    install_requires=['airfoilprep.py>=0.1'],  # , 'zope.interface'],
+    packages=['ccblade'],
+    install_requires=[
+        'airfoilprep.py>=0.1',
+        'numpy==1.12.1',
+        'scipy==0.19.0',
+        'zope.interface==4.3.3',
+        'matplotlib==2.0.0'
+    ],
+    package_data={
+        'ccblade': ['data/5MW_AFFiles/*']
+    },
     # test_suite='test.test_ccblade.py',
     license='Apache License, Version 2.0',
-    ext_modules=[Extension('_bem', ['src/bem.f90'], extra_compile_args=['-O2'])],
-    dependency_links=['https://github.com/WISDEM/AirfoilPreppy/tarball/master#egg=airfoilprep.py-0.1'],
+    ext_modules=[Extension('ccblade._bem', ['ccblade/bem.f90'], extra_compile_args=['-O2'])],
+    entry_points={
+        'console_scripts': ['ccblade=ccblade.ccblade:run']
+    },
     zip_safe=False
 )

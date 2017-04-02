@@ -1,0 +1,2 @@
+https://github.com/WISDEM/AirfoilPreppy/tarball/master#egg=airfoilprep.py
+-e .

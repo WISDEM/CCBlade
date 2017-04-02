@@ -84,3 +84,9 @@ nosetests.xml
 Icon?
 ehthumbs.db
 Thumbs.db
+
+# PyCharm
+.idea/
+
+# VirtualEnv
+devenv/
