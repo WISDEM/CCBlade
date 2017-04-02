@@ -35,6 +35,7 @@ from scipy.optimize import brentq
 from scipy.interpolate import RectBivariateSpline, bisplev
 from zope.interface import Interface, implements
 import warnings
+from pkg_resources import resource_filename
 
 from airfoilprep import Airfoil
 import _bem
@@ -1003,7 +1004,7 @@ class CCBlade:
         return dT, dQ, dP
 
 
-if __name__ == '__main__':
+def run():
 
     # geometry
     Rhub = 1.5
@@ -1022,20 +1023,20 @@ if __name__ == '__main__':
     rho = 1.225
     mu = 1.81206e-5
 
-    import os
+    from os import path
     afinit = CCAirfoil.initFromAerodynFile  # just for shorthand
-    basepath = '5MW_AFFiles' + os.path.sep
+    basepath = resource_filename('ccblade', path.join('data', '5MW_AFFiles'))
 
     # load all airfoils
     airfoil_types = [0]*8
-    airfoil_types[0] = afinit(basepath + 'Cylinder1.dat')
-    airfoil_types[1] = afinit(basepath + 'Cylinder2.dat')
-    airfoil_types[2] = afinit(basepath + 'DU40_A17.dat')
-    airfoil_types[3] = afinit(basepath + 'DU35_A17.dat')
-    airfoil_types[4] = afinit(basepath + 'DU30_A17.dat')
-    airfoil_types[5] = afinit(basepath + 'DU25_A17.dat')
-    airfoil_types[6] = afinit(basepath + 'DU21_A17.dat')
-    airfoil_types[7] = afinit(basepath + 'NACA64_A17.dat')
+    airfoil_types[0] = afinit(path.join(basepath, 'Cylinder1.dat'))
+    airfoil_types[1] = afinit(path.join(basepath, 'Cylinder2.dat'))
+    airfoil_types[2] = afinit(path.join(basepath, 'DU40_A17.dat'))
+    airfoil_types[3] = afinit(path.join(basepath, 'DU35_A17.dat'))
+    airfoil_types[4] = afinit(path.join(basepath, 'DU30_A17.dat'))
+    airfoil_types[5] = afinit(path.join(basepath, 'DU25_A17.dat'))
+    airfoil_types[6] = afinit(path.join(basepath, 'DU21_A17.dat'))
+    airfoil_types[7] = afinit(path.join(basepath, 'NACA64_A17.dat'))
 
     # place at appropriate radial stations
     af_idx = [0, 0, 1, 2, 3, 3, 4, 5, 5, 6, 6, 7, 7, 7, 7, 7, 7]
@@ -1094,3 +1095,6 @@ if __name__ == '__main__':
     plt.ylabel('$c_p$')
 
     plt.show()
+
+if __name__ == '__main__':
+    run()

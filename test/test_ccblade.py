@@ -17,7 +17,8 @@ import numpy as np
 from os import path
 import math
 
-from ccblade import CCAirfoil, CCBlade
+from pkg_resources import resource_filename
+from ccblade.ccblade import CCAirfoil, CCBlade
 
 
 class TestNREL5MW(unittest.TestCase):
@@ -42,7 +43,7 @@ class TestNREL5MW(unittest.TestCase):
         mu = 1.81206e-5
 
         afinit = CCAirfoil.initFromAerodynFile  # just for shorthand
-        basepath = path.join(path.dirname(path.realpath(__file__)), '5MW_AFFiles')
+        basepath = resource_filename('ccblade', path.join('data', '5MW_AFFiles'))
 
         # load all airfoils
         airfoil_types = [0]*8
