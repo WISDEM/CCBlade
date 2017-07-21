@@ -28,17 +28,21 @@ See the License for the specific language governing permissions and
 limitations under the License.
 
 """
+from __future__ import print_function
 
 import numpy as np
 from math import pi, radians, sin, cos
 from scipy.optimize import brentq
 from scipy.interpolate import RectBivariateSpline, bisplev
-from zope.interface import Interface, implements
+from zope.interface import Interface, implementer
 import warnings
 from pkg_resources import resource_filename
 
 from airfoilprep import Airfoil
-import _bem
+try:
+    from ccblade import _bem
+except ImportError:
+    import _bem
 
 
 
@@ -79,11 +83,11 @@ class AirfoilInterface(Interface):
 #  Airfoil Class
 # ------------------
 
-
+@implementer(AirfoilInterface)
 class CCAirfoil:
     """A helper class to evaluate airfoil data using a continuously
     differentiable cubic spline"""
-    implements(AirfoilInterface)
+    # implements(AirfoilInterface)
 
 
     def __init__(self, alpha, Re, cl, cd):
@@ -1079,7 +1083,7 @@ def run():
 
     CP, CT, CQ = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=True)
 
-    print CP, CT, CQ
+    print(CP, CT, CQ)
 
 
     tsr = np.linspace(2, 14, 50)
