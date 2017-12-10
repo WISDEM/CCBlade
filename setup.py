@@ -15,10 +15,10 @@ setup(
     packages=['ccblade'],
     install_requires=[
         'airfoilprep.py>=0.1',
-        'numpy==1.12.1',
-        'scipy==0.18.1',
-        'zope.interface==4.4.2',
-        'matplotlib==2.0.0'
+        'numpy>=1.12.1',
+        'scipy>=0.18.1',
+        'zope.interface>=4.4.2',
+        'matplotlib>=2.0.0'
     ],
     package_data={
         'ccblade': ['data/5MW_AFFiles/*']
