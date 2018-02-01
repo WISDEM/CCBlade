@@ -14,7 +14,7 @@ setup(
     author_email='andrew.ning@nrel.gov',
     package_dir={'': 'src'},
     py_modules=['ccblade'],
-    package_data: {'ccblade': []},
+    package_data={'ccblade': []},
     packages=['ccblade'],
     install_requires=['airfoilprep.py>=0.1'],  # , 'zope.interface'],
     # test_suite='test.test_ccblade.py',
