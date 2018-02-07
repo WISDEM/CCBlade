@@ -1,7 +1,9 @@
 from ccblade import CCAirfoil, CCBlade as CCBlade_PY
 from openmdao.api import Component
 import numpy as np
-from commonse.utilities import cosd, sind, smooth_abs
+
+cosd = lambda x: np.cos(np.deg2rad(x))
+sind = lambda x: np.sin(np.deg2rad(x))
 
 # ---------------------
 # Base Components
@@ -46,7 +48,7 @@ class CCBladeGeometry(GeometrySetupBase):
     def linearize(self, params, unknowns, resids):
 
         J_sub = np.array([[cosd(self.precone), sind(self.precone),
-            (-self.Rtip*sind(self.precone) + self.precurveTip*sind(self.precone))*pi/180.0]])
+            (-self.Rtip*sind(self.precone) + self.precurveTip*sind(self.precone))*np.pi/180.0]])
         J = {}
         J['R', 'Rtip'] = J_sub[0][0]
         J['R', 'precurveTip'] = J_sub[0][1]
@@ -356,7 +358,7 @@ class CCBladeLoads(Component):
         dTp = self.dTp
         n = len(self.r)
 
-        dr_dr = vstack([np.zeros(n), np.eye(n), np.zeros(n)])
+        dr_dr = np.vstack([np.zeros(n), np.eye(n), np.zeros(n)])
         dr_dRhub = np.zeros(n+2)
         dr_dRtip = np.zeros(n+2)
         dr_dRhub[0] = 1.0
