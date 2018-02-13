@@ -94,10 +94,10 @@ class CCBladePower(Component):
 
         # parameters
         self.add_param('airfoil_files', val=[0]*naero, desc='names of airfoil file', pass_by_obj=True)
-        self.add_param('B', val=3, desc='number of blades', pass_by_obj=True)
-        self.add_param('rho', val=1.225, units='kg/m**3', desc='density of air')
-        self.add_param('mu', val=1.81206e-5, units='kg/(m*s)', desc='dynamic viscosity of air')
-        self.add_param('shearExp', val=0.2, desc='shear exponent')
+        self.add_param('B', val=0, desc='number of blades', pass_by_obj=True)
+        self.add_param('rho', val=0.0, units='kg/m**3', desc='density of air')
+        self.add_param('mu', val=0.0, units='kg/(m*s)', desc='dynamic viscosity of air')
+        self.add_param('shearExp', val=0.0, desc='shear exponent')
         self.add_param('nSector', val=4, desc='number of sectors to divide rotor face into in computing thrust and power', pass_by_obj=True)
         self.add_param('tiploss', val=True, desc='include Prandtl tip loss model', pass_by_obj=True)
         self.add_param('hubloss', val=True, desc='include Prandtl hub loss model', pass_by_obj=True)
@@ -264,10 +264,10 @@ class CCBladeLoads(Component):
 
         # parameters
         self.add_param('airfoil_files', val=[0]*naero, desc='names of airfoil file', pass_by_obj=True)
-        self.add_param('B', val=3, desc='number of blades', pass_by_obj=True)
-        self.add_param('rho', val=1.225, units='kg/m**3', desc='density of air')
-        self.add_param('mu', val=1.81206e-5, units='kg/(m*s)', desc='dynamic viscosity of air')
-        self.add_param('shearExp', val=0.2, desc='shear exponent')
+        self.add_param('B', val=0, desc='number of blades', pass_by_obj=True)
+        self.add_param('rho', val=0.0, units='kg/m**3', desc='density of air')
+        self.add_param('mu', val=0.0, units='kg/(m*s)', desc='dynamic viscosity of air')
+        self.add_param('shearExp', val=0.0, desc='shear exponent')
         self.add_param('nSector', val=4, desc='number of sectors to divide rotor face into in computing thrust and power', pass_by_obj=True)
         self.add_param('tiploss', val=True, desc='include Prandtl tip loss model', pass_by_obj=True)
         self.add_param('hubloss', val=True, desc='include Prandtl hub loss model', pass_by_obj=True)
