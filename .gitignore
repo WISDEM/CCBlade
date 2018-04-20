@@ -12,6 +12,7 @@ generated
 
 # C extensions
 *.so
+*.dSYM
 
 # Packages
 *.egg
