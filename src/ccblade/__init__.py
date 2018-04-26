@@ -1,1 +1,1 @@
-from ccblade import CCAirfoil, CCBlade as CCBlade_PY
+from ccblade import CCAirfoil, CCBlade

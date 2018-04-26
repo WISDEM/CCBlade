@@ -1,4 +1,4 @@
-from ccblade import CCAirfoil, CCBlade as CCBlade_PY
+from ccblade import CCAirfoil, CCBlade as CCBlade
 from openmdao.api import Component
 import numpy as np
 
@@ -145,7 +145,7 @@ class CCBladePower(Component):
         for i in range(n):
             af[i] = afinit(self.airfoil_files[i])
 
-        self.ccblade = CCBlade_PY(self.r, self.chord, self.theta, af, self.Rhub, self.Rtip, self.B,
+        self.ccblade = CCBlade(self.r, self.chord, self.theta, af, self.Rhub, self.Rtip, self.B,
             self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp, self.hubHt,
             self.nSector, self.precurve, self.precurveTip, tiploss=self.tiploss, hubloss=self.hubloss,
             wakerotation=self.wakerotation, usecd=self.usecd, derivatives=True)
@@ -317,7 +317,7 @@ class CCBladeLoads(Component):
         for i in range(n):
             af[i] = afinit(self.airfoil_files[i])
 
-        self.ccblade = CCBlade_PY(self.r, self.chord, self.theta, af, self.Rhub, self.Rtip, self.B,
+        self.ccblade = CCBlade(self.r, self.chord, self.theta, af, self.Rhub, self.Rtip, self.B,
             self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp, self.hubHt,
             self.nSector, self.precurve, self.precurveTip, tiploss=self.tiploss, hubloss=self.hubloss,
             wakerotation=self.wakerotation, usecd=self.usecd, derivatives=True)
