@@ -14,7 +14,7 @@ class GeometrySetupBase(Component):
     """a base component that computes the rotor radius from the geometry"""
     def __init__(self):
         super(GeometrySetupBase, self).__init__()
-        self.add_output('R', shape=1, units='m', desc='rotor radius')
+        self.add_output('R', val=0.0, units='m', desc='rotor radius')
 
 # ---------------------
 # Default Implementations of Base Classes
@@ -22,10 +22,10 @@ class GeometrySetupBase(Component):
 class CCBladeGeometry(GeometrySetupBase):
     def __init__(self):
         super(CCBladeGeometry, self).__init__()
-        self.add_param('Rtip', shape=1, units='m', desc='tip radius')
+        self.add_param('Rtip', val=0.0, units='m', desc='tip radius')
         self.add_param('precurveTip', val=0.0, units='m', desc='tip radius')
         self.add_param('precone', val=0.0, desc='precone angle', units='deg')
-        self.add_output('diameter', shape=1, units='m')
+        self.add_output('diameter', val=0.0, units='m')
         
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -67,29 +67,29 @@ class CCBladePower(Component):
         """blade element momentum code"""
 
         # inputs
-        self.add_param('Uhub', shape=npower, units='m/s', desc='hub height wind speed')
-        self.add_param('Omega', shape=npower, units='rpm', desc='rotor rotation speed')
-        self.add_param('pitch', shape=npower, units='deg', desc='blade pitch setting')
+        self.add_param('Uhub', val=np.zeros(npower), units='m/s', desc='hub height wind speed')
+        self.add_param('Omega', val=np.zeros(npower), units='rpm', desc='rotor rotation speed')
+        self.add_param('pitch', val=np.zeros(npower), units='deg', desc='blade pitch setting')
 
         # outputs
-        self.add_output('T', shape=npower, units='N', desc='rotor aerodynamic thrust')
-        self.add_output('Q', shape=npower, units='N*m', desc='rotor aerodynamic torque')
-        self.add_output('P', shape=npower, units='W', desc='rotor aerodynamic power')
+        self.add_output('T', val=np.zeros(npower), units='N', desc='rotor aerodynamic thrust')
+        self.add_output('Q', val=np.zeros(npower), units='N*m', desc='rotor aerodynamic torque')
+        self.add_output('P', val=np.zeros(npower), units='W', desc='rotor aerodynamic power')
 
         
         # (potential) variables
-        self.add_param('r', shape=naero, units='m', desc='radial locations where blade is defined (should be increasing and not go all the way to hub or tip)')
-        self.add_param('chord', shape=naero, units='m', desc='chord length at each section')
-        self.add_param('theta', shape=naero,  units='deg', desc='twist angle at each section (positive decreases angle of attack)')
-        self.add_param('Rhub', shape=1, units='m', desc='hub radius')
-        self.add_param('Rtip', shape=1, units='m', desc='tip radius')
+        self.add_param('r', val=np.zeros(naero), units='m', desc='radial locations where blade is defined (should be increasing and not go all the way to hub or tip)')
+        self.add_param('chord', val=np.zeros(naero), units='m', desc='chord length at each section')
+        self.add_param('theta', val=np.zeros(naero),  units='deg', desc='twist angle at each section (positive decreases angle of attack)')
+        self.add_param('Rhub', val=0.0, units='m', desc='hub radius')
+        self.add_param('Rtip', val=0.0, units='m', desc='tip radius')
         self.add_param('hubHt', val=0.0, units='m', desc='hub height')
-        self.add_param('precone', shape=1, desc='precone angle', units='deg')
-        self.add_param('tilt', shape=1, desc='shaft tilt', units='deg')
-        self.add_param('yaw', shape=1, desc='yaw error', units='deg')
+        self.add_param('precone', val=0.0, desc='precone angle', units='deg')
+        self.add_param('tilt', val=0.0, desc='shaft tilt', units='deg')
+        self.add_param('yaw', val=0.0, desc='yaw error', units='deg')
 
         # TODO: I've not hooked up the gradients for these ones yet.
-        self.add_param('precurve', shape=naero, units='m', desc='precurve at each section')
+        self.add_param('precurve', val=np.zeros(naero), units='m', desc='precurve at each section')
         self.add_param('precurveTip', val=0.0, units='m', desc='precurve at tip')
 
         # parameters
@@ -134,16 +134,15 @@ class CCBladePower(Component):
         self.Uhub = params['Uhub']
         self.Omega = params['Omega']
         self.pitch = params['pitch']
-
+        
         if len(self.precurve) == 0:
             self.precurve = np.zeros_like(self.r)
 
         # airfoil files
         n = len(self.airfoil_files)
         af = [0]*n
-        afinit = CCAirfoil.initFromAerodynFile
         for i in range(n):
-            af[i] = afinit(self.airfoil_files[i])
+            af[i] = CCAirfoil.initFromAerodynFile(self.airfoil_files[i])
 
         self.ccblade = CCBlade(self.r, self.chord, self.theta, af, self.Rhub, self.Rtip, self.B,
             self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp, self.hubHt,
@@ -156,7 +155,7 @@ class CCBladePower(Component):
         unknowns['T'] = self.T
         unknowns['Q'] = self.Q
         unknowns['P'] = self.P
-
+        
 
     def list_deriv_vars(self):
 
@@ -228,38 +227,38 @@ class CCBladeLoads(Component):
         """blade element momentum code"""
 
         # inputs
-        self.add_param('V_load', shape=1, units='m/s', desc='hub height wind speed')
-        self.add_param('Omega_load', shape=1, units='rpm', desc='rotor rotation speed')
-        self.add_param('pitch_load', shape=1, units='deg', desc='blade pitch setting')
-        self.add_param('azimuth_load', shape=1, units='deg', desc='blade azimuthal location')
+        self.add_param('V_load', val=0.0, units='m/s', desc='hub height wind speed')
+        self.add_param('Omega_load', val=0.0, units='rpm', desc='rotor rotation speed')
+        self.add_param('pitch_load', val=0.0, units='deg', desc='blade pitch setting')
+        self.add_param('azimuth_load', val=0.0, units='deg', desc='blade azimuthal location')
 
         # outputs
-        self.add_output('loads:r', shape=naero+2, units='m', desc='radial positions along blade going toward tip')
-        self.add_output('loads:Px', shape=naero+2, units='N/m', desc='distributed loads in blade-aligned x-direction')
-        self.add_output('loads:Py', shape=naero+2, units='N/m', desc='distributed loads in blade-aligned y-direction')
-        self.add_output('loads:Pz', shape=naero+2, units='N/m', desc='distributed loads in blade-aligned z-direction')
+        self.add_output('loads:r', val=np.zeros(naero+2), units='m', desc='radial positions along blade going toward tip')
+        self.add_output('loads:Px', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned x-direction')
+        self.add_output('loads:Py', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned y-direction')
+        self.add_output('loads:Pz', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned z-direction')
 
         # corresponding setting for loads
-        self.add_output('loads:V', shape=1, units='m/s', desc='hub height wind speed')
-        self.add_output('loads:Omega', shape=1, units='rpm', desc='rotor rotation speed')
-        self.add_output('loads:pitch', shape=1, units='deg', desc='pitch angle')
-        self.add_output('loads:azimuth', shape=1, units='deg', desc='azimuthal angle')
+        self.add_output('loads:V', val=0.0, units='m/s', desc='hub height wind speed')
+        self.add_output('loads:Omega', val=0.0, units='rpm', desc='rotor rotation speed')
+        self.add_output('loads:pitch', val=0.0, units='deg', desc='pitch angle')
+        self.add_output('loads:azimuth', val=0.0, units='deg', desc='azimuthal angle')
 
 
         
         # (potential) variables
-        self.add_param('r', shape=naero, units='m', desc='radial locations where blade is defined (should be increasing and not go all the way to hub or tip)')
-        self.add_param('chord', shape=naero, units='m', desc='chord length at each section')
-        self.add_param('theta', shape=naero,  units='deg', desc='twist angle at each section (positive decreases angle of attack)')
-        self.add_param('Rhub', shape=1, units='m', desc='hub radius')
-        self.add_param('Rtip', shape=1, units='m', desc='tip radius')
+        self.add_param('r', val=np.zeros(naero), units='m', desc='radial locations where blade is defined (should be increasing and not go all the way to hub or tip)')
+        self.add_param('chord', val=np.zeros(naero), units='m', desc='chord length at each section')
+        self.add_param('theta', val=np.zeros(naero),  units='deg', desc='twist angle at each section (positive decreases angle of attack)')
+        self.add_param('Rhub', val=0.0, units='m', desc='hub radius')
+        self.add_param('Rtip', val=0.0, units='m', desc='tip radius')
         self.add_param('hubHt', val=0.0, units='m', desc='hub height')
-        self.add_param('precone', shape=1, desc='precone angle', units='deg')
-        self.add_param('tilt', shape=1, desc='shaft tilt', units='deg')
-        self.add_param('yaw', shape=1, desc='yaw error', units='deg')
+        self.add_param('precone', val=0.0, desc='precone angle', units='deg')
+        self.add_param('tilt', val=0.0, desc='shaft tilt', units='deg')
+        self.add_param('yaw', val=0.0, desc='yaw error', units='deg')
 
         # TODO: I've not hooked up the gradients for these ones yet.
-        self.add_param('precurve', shape=naero, units='m', desc='precurve at each section')
+        self.add_param('precurve', val=np.zeros(naero), units='m', desc='precurve at each section')
         self.add_param('precurveTip', val=0.0, units='m', desc='precurve at tip')
 
         # parameters
@@ -313,9 +312,8 @@ class CCBladeLoads(Component):
         # airfoil files
         n = len(self.airfoil_files)
         af = [0]*n
-        afinit = CCAirfoil.initFromAerodynFile
         for i in range(n):
-            af[i] = afinit(self.airfoil_files[i])
+            af[i] = CCAirfoil.initFromAerodynFile(self.airfoil_files[i])
 
         self.ccblade = CCBlade(self.r, self.chord, self.theta, af, self.Rhub, self.Rtip, self.B,
             self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp, self.hubHt,
