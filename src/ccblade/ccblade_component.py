@@ -93,7 +93,7 @@ class CCBladePower(Component):
         self.add_param('precurveTip', val=0.0, units='m', desc='precurve at tip')
 
         # parameters
-        self.add_param('airfoil_files', val=[0]*naero, desc='names of airfoil file', pass_by_obj=True)
+        self.add_param('airfoils', val=[0]*naero, desc='CCAirfoil instances', pass_by_obj=True)
         self.add_param('B', val=0, desc='number of blades', pass_by_obj=True)
         self.add_param('rho', val=0.0, units='kg/m**3', desc='density of air')
         self.add_param('mu', val=0.0, units='kg/(m*s)', desc='dynamic viscosity of air')
@@ -121,7 +121,7 @@ class CCBladePower(Component):
         self.yaw = params['yaw']
         self.precurve = params['precurve']
         self.precurveTip = params['precurveTip']
-        self.airfoil_files = params['airfoil_files']
+        self.airfoils = params['airfoils']
         self.B = params['B']
         self.rho = params['rho']
         self.mu = params['mu']
@@ -139,10 +139,11 @@ class CCBladePower(Component):
             self.precurve = np.zeros_like(self.r)
 
         # airfoil files
-        n = len(self.airfoil_files)
-        af = [0]*n
-        for i in range(n):
-            af[i] = CCAirfoil.initFromAerodynFile(self.airfoil_files[i])
+        n = len(self.airfoils)
+        af = self.airfoils
+        # af = [0]*n
+        # for i in range(n):
+        #     af[i] = CCAirfoil.initFromAerodynFile(self.airfoil_files[i])
 
         self.ccblade = CCBlade(self.r, self.chord, self.theta, af, self.Rhub, self.Rtip, self.B,
             self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp, self.hubHt,
@@ -233,16 +234,16 @@ class CCBladeLoads(Component):
         self.add_param('azimuth_load', val=0.0, units='deg', desc='blade azimuthal location')
 
         # outputs
-        self.add_output('loads:r', val=np.zeros(naero+2), units='m', desc='radial positions along blade going toward tip')
-        self.add_output('loads:Px', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned x-direction')
-        self.add_output('loads:Py', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned y-direction')
-        self.add_output('loads:Pz', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned z-direction')
+        self.add_output('loads_r', val=np.zeros(naero+2), units='m', desc='radial positions along blade going toward tip')
+        self.add_output('loads_Px', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned x-direction')
+        self.add_output('loads_Py', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned y-direction')
+        self.add_output('loads_Pz', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned z-direction')
 
         # corresponding setting for loads
-        self.add_output('loads:V', val=0.0, units='m/s', desc='hub height wind speed')
-        self.add_output('loads:Omega', val=0.0, units='rpm', desc='rotor rotation speed')
-        self.add_output('loads:pitch', val=0.0, units='deg', desc='pitch angle')
-        self.add_output('loads:azimuth', val=0.0, units='deg', desc='azimuthal angle')
+        self.add_output('loads_V', val=0.0, units='m/s', desc='hub height wind speed')
+        self.add_output('loads_Omega', val=0.0, units='rpm', desc='rotor rotation speed')
+        self.add_output('loads_pitch', val=0.0, units='deg', desc='pitch angle')
+        self.add_output('loads_azimuth', val=0.0, units='deg', desc='azimuthal angle')
 
 
         
@@ -262,7 +263,7 @@ class CCBladeLoads(Component):
         self.add_param('precurveTip', val=0.0, units='m', desc='precurve at tip')
 
         # parameters
-        self.add_param('airfoil_files', val=[0]*naero, desc='names of airfoil file', pass_by_obj=True)
+        self.add_param('airfoils', val=[0]*naero, desc='CCAirfoil instances', pass_by_obj=True)
         self.add_param('B', val=0, desc='number of blades', pass_by_obj=True)
         self.add_param('rho', val=0.0, units='kg/m**3', desc='density of air')
         self.add_param('mu', val=0.0, units='kg/(m*s)', desc='dynamic viscosity of air')
@@ -290,7 +291,7 @@ class CCBladeLoads(Component):
         self.yaw = params['yaw']
         self.precurve = params['precurve']
         self.precurveTip = params['precurveTip']
-        self.airfoil_files = params['airfoil_files']
+        self.airfoils = params['airfoils']
         self.B = params['B']
         self.rho = params['rho']
         self.mu = params['mu']
@@ -310,10 +311,11 @@ class CCBladeLoads(Component):
             self.precurve = np.zeros_like(self.r)
 
         # airfoil files
-        n = len(self.airfoil_files)
-        af = [0]*n
-        for i in range(n):
-            af[i] = CCAirfoil.initFromAerodynFile(self.airfoil_files[i])
+        n = len(self.airfoils)
+        af = self.airfoils
+        # af = [0]*n
+        # for i in range(n):
+        #     af[i] = CCAirfoil.initFromAerodynFile(self.airfoil_files[i])
 
         self.ccblade = CCBlade(self.r, self.chord, self.theta, af, self.Rhub, self.Rtip, self.B,
             self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp, self.hubHt,
@@ -325,27 +327,27 @@ class CCBladeLoads(Component):
             = self.ccblade.distributedAeroLoads(self.V_load, self.Omega_load, self.pitch_load, self.azimuth_load)
 
         # concatenate loads at root/tip
-        unknowns['loads:r'] = np.concatenate([[self.Rhub], self.r, [self.Rtip]])
+        unknowns['loads_r'] = np.concatenate([[self.Rhub], self.r, [self.Rtip]])
         Np = np.concatenate([[0.0], Np, [0.0]])
         Tp = np.concatenate([[0.0], Tp, [0.0]])
 
         # conform to blade-aligned coordinate system
-        unknowns['loads:Px'] = Np
-        unknowns['loads:Py'] = -Tp
-        unknowns['loads:Pz'] = 0*Np
+        unknowns['loads_Px'] = Np
+        unknowns['loads_Py'] = -Tp
+        unknowns['loads_Pz'] = 0*Np
 
         # return other outputs needed
-        unknowns['loads:V'] = self.V_load
-        unknowns['loads:Omega'] = self.Omega_load
-        unknowns['loads:pitch'] = self.pitch_load
-        unknowns['loads:azimuth'] = self.azimuth_load
+        unknowns['loads_V'] = self.V_load
+        unknowns['loads_Omega'] = self.Omega_load
+        unknowns['loads_pitch'] = self.pitch_load
+        unknowns['loads_azimuth'] = self.azimuth_load
 
 
     def list_deriv_vars(self):
         inputs = ('r', 'chord', 'theta', 'Rhub', 'Rtip', 'hubHt', 'precone',
                   'tilt', 'yaw', 'V_load', 'Omega_load', 'pitch_load', 'azimuth_load', 'precurve')
-        outputs = ('loads:r', 'loads:Px', 'loads:Py', 'loads:Pz', 'loads:V',
-                   'loads:Omega', 'loads:pitch', 'loads:azimuth')
+        outputs = ('loads_r', 'loads_Px', 'loads_Py', 'loads_Pz', 'loads_V',
+                   'loads_Omega', 'loads_pitch', 'loads_azimuth')
 
         return inputs, outputs
 
@@ -373,41 +375,41 @@ class CCBladeLoads(Component):
 
         J = {}
         zero = np.zeros(self.naero)
-        J['loads:r', 'r'] = dr_dr
-        J['loads:r', 'Rhub'] = dr_dRhub
-        J['loads:r', 'Rtip'] = dr_dRtip
-        J['loads:Px', 'r'] = np.vstack([zero, dNp['dr'], zero])
-        J['loads:Px', 'chord'] = np.vstack([zero, dNp['dchord'], zero])
-        J['loads:Px', 'theta'] = np.vstack([zero, dNp['dtheta'], zero])
-        J['loads:Px', 'Rhub'] = np.concatenate([[0.0], np.squeeze(dNp['dRhub']), [0.0]])
-        J['loads:Px', 'Rtip'] = np.concatenate([[0.0], np.squeeze(dNp['dRtip']), [0.0]])
-        J['loads:Px', 'hubHt'] = np.concatenate([[0.0], np.squeeze(dNp['dhubHt']), [0.0]])
-        J['loads:Px', 'precone'] = np.concatenate([[0.0], np.squeeze(dNp['dprecone']), [0.0]])
-        J['loads:Px', 'tilt'] = np.concatenate([[0.0], np.squeeze(dNp['dtilt']), [0.0]])
-        J['loads:Px', 'yaw'] = np.concatenate([[0.0], np.squeeze(dNp['dyaw']), [0.0]])
-        J['loads:Px', 'V_load'] = np.concatenate([[0.0], np.squeeze(dNp['dUinf']), [0.0]])
-        J['loads:Px', 'Omega_load'] = np.concatenate([[0.0], np.squeeze(dNp['dOmega']), [0.0]])
-        J['loads:Px', 'pitch_load'] = np.concatenate([[0.0], np.squeeze(dNp['dpitch']), [0.0]])
-        J['loads:Px', 'azimuth_load'] = np.concatenate([[0.0], np.squeeze(dNp['dazimuth']), [0.0]])
-        J['loads:Px', 'precurve'] = np.vstack([zero, dNp['dprecurve'], zero])
-        J['loads:Py', 'r'] = np.vstack([zero, -dTp['dr'], zero])
-        J['loads:Py', 'chord'] = np.vstack([zero, -dTp['dchord'], zero])
-        J['loads:Py', 'theta'] = np.vstack([zero, -dTp['dtheta'], zero])
-        J['loads:Py', 'Rhub'] = np.concatenate([[0.0], -np.squeeze(dTp['dRhub']), [0.0]])
-        J['loads:Py', 'Rtip'] = np.concatenate([[0.0], -np.squeeze(dTp['dRtip']), [0.0]])
-        J['loads:Py', 'hubHt'] = np.concatenate([[0.0], -np.squeeze(dTp['dhubHt']), [0.0]])
-        J['loads:Py', 'precone'] = np.concatenate([[0.0], -np.squeeze(dTp['dprecone']), [0.0]])
-        J['loads:Py', 'tilt'] = np.concatenate([[0.0], -np.squeeze(dTp['dtilt']), [0.0]])
-        J['loads:Py', 'yaw'] = np.concatenate([[0.0], -np.squeeze(dTp['dyaw']), [0.0]])
-        J['loads:Py', 'V_load'] = np.concatenate([[0.0], -np.squeeze(dTp['dUinf']), [0.0]])
-        J['loads:Py', 'Omega_load'] = np.concatenate([[0.0], -np.squeeze(dTp['dOmega']), [0.0]])
-        J['loads:Py', 'pitch_load'] = np.concatenate([[0.0], -np.squeeze(dTp['dpitch']), [0.0]])
-        J['loads:Py', 'azimuth_load'] = np.concatenate([[0.0], -np.squeeze(dTp['dazimuth']), [0.0]])
-        J['loads:Py', 'precurve'] = np.vstack([zero, -dTp['dprecurve'], zero])
-        J['loads:V', 'V_load'] = 1.0
-        J['loads:Omega', 'Omega_load'] = 1.0
-        J['loads:pitch', 'pitch_load'] = 1.0
-        J['loads:azimuth', 'azimuth_load'] = 1.0
+        J['loads_r', 'r'] = dr_dr
+        J['loads_r', 'Rhub'] = dr_dRhub
+        J['loads_r', 'Rtip'] = dr_dRtip
+        J['loads_Px', 'r'] = np.vstack([zero, dNp['dr'], zero])
+        J['loads_Px', 'chord'] = np.vstack([zero, dNp['dchord'], zero])
+        J['loads_Px', 'theta'] = np.vstack([zero, dNp['dtheta'], zero])
+        J['loads_Px', 'Rhub'] = np.concatenate([[0.0], np.squeeze(dNp['dRhub']), [0.0]])
+        J['loads_Px', 'Rtip'] = np.concatenate([[0.0], np.squeeze(dNp['dRtip']), [0.0]])
+        J['loads_Px', 'hubHt'] = np.concatenate([[0.0], np.squeeze(dNp['dhubHt']), [0.0]])
+        J['loads_Px', 'precone'] = np.concatenate([[0.0], np.squeeze(dNp['dprecone']), [0.0]])
+        J['loads_Px', 'tilt'] = np.concatenate([[0.0], np.squeeze(dNp['dtilt']), [0.0]])
+        J['loads_Px', 'yaw'] = np.concatenate([[0.0], np.squeeze(dNp['dyaw']), [0.0]])
+        J['loads_Px', 'V_load'] = np.concatenate([[0.0], np.squeeze(dNp['dUinf']), [0.0]])
+        J['loads_Px', 'Omega_load'] = np.concatenate([[0.0], np.squeeze(dNp['dOmega']), [0.0]])
+        J['loads_Px', 'pitch_load'] = np.concatenate([[0.0], np.squeeze(dNp['dpitch']), [0.0]])
+        J['loads_Px', 'azimuth_load'] = np.concatenate([[0.0], np.squeeze(dNp['dazimuth']), [0.0]])
+        J['loads_Px', 'precurve'] = np.vstack([zero, dNp['dprecurve'], zero])
+        J['loads_Py', 'r'] = np.vstack([zero, -dTp['dr'], zero])
+        J['loads_Py', 'chord'] = np.vstack([zero, -dTp['dchord'], zero])
+        J['loads_Py', 'theta'] = np.vstack([zero, -dTp['dtheta'], zero])
+        J['loads_Py', 'Rhub'] = np.concatenate([[0.0], -np.squeeze(dTp['dRhub']), [0.0]])
+        J['loads_Py', 'Rtip'] = np.concatenate([[0.0], -np.squeeze(dTp['dRtip']), [0.0]])
+        J['loads_Py', 'hubHt'] = np.concatenate([[0.0], -np.squeeze(dTp['dhubHt']), [0.0]])
+        J['loads_Py', 'precone'] = np.concatenate([[0.0], -np.squeeze(dTp['dprecone']), [0.0]])
+        J['loads_Py', 'tilt'] = np.concatenate([[0.0], -np.squeeze(dTp['dtilt']), [0.0]])
+        J['loads_Py', 'yaw'] = np.concatenate([[0.0], -np.squeeze(dTp['dyaw']), [0.0]])
+        J['loads_Py', 'V_load'] = np.concatenate([[0.0], -np.squeeze(dTp['dUinf']), [0.0]])
+        J['loads_Py', 'Omega_load'] = np.concatenate([[0.0], -np.squeeze(dTp['dOmega']), [0.0]])
+        J['loads_Py', 'pitch_load'] = np.concatenate([[0.0], -np.squeeze(dTp['dpitch']), [0.0]])
+        J['loads_Py', 'azimuth_load'] = np.concatenate([[0.0], -np.squeeze(dTp['dazimuth']), [0.0]])
+        J['loads_Py', 'precurve'] = np.vstack([zero, -dTp['dprecurve'], zero])
+        J['loads_V', 'V_load'] = 1.0
+        J['loads_Omega', 'Omega_load'] = 1.0
+        J['loads_pitch', 'pitch_load'] = 1.0
+        J['loads_azimuth', 'azimuth_load'] = 1.0
 
         return J
     
