@@ -33,45 +33,11 @@ import numpy as np
 from math import pi, radians, sin, cos
 from scipy.optimize import brentq
 from scipy.interpolate import RectBivariateSpline, bisplev
-from zope.interface import Interface, implements
 import warnings
 
 from airfoilprep import Airfoil
 import _bem
 
-
-
-# ------------------
-#  Interfaces
-# ------------------
-
-
-class AirfoilInterface(Interface):
-    """Interface for airfoil aerodynamic analysis."""
-
-    def evaluate(alpha, Re):
-        """Get lift/drag coefficient at the specified angle of attack and Reynolds number
-
-        Parameters
-        ----------
-        alpha : float (rad)
-            angle of attack
-        Re : float
-            Reynolds number
-
-        Returns
-        -------
-        cl : float
-            lift coefficient
-        cd : float
-            drag coefficient
-
-        Notes
-        -----
-        Any implementation can be used, but to keep the smooth properties
-        of CCBlade, the implementation should be C1 continuous.
-
-        """
 
 
 # ------------------
@@ -82,7 +48,6 @@ class AirfoilInterface(Interface):
 class CCAirfoil:
     """A helper class to evaluate airfoil data using a continuously
     differentiable cubic spline"""
-    implements(AirfoilInterface)
 
 
     def __init__(self, alpha, Re, cl, cd):
@@ -217,8 +182,6 @@ class CCBlade:
         theta : array_like (deg)
             corresponding :ref:`twist angle <blade_airfoil_coord>` at each section---
             positive twist decreases angle of attack.
-        af : list(AirfoilInterface)
-            list of :ref:`AirfoilInterface <airfoil-interface-label>` objects at each section
         Rhub : float (m)
             location of hub
         Rtip : float (m)
