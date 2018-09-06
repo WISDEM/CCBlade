@@ -104,9 +104,9 @@ class CCBladePower(Component):
         self.add_param('wakerotation', val=True, desc='include effect of wake rotation (i.e., tangential induction factor is nonzero)', pass_by_obj=True)
         self.add_param('usecd', val=True, desc='use drag coefficient in computing induction factors', pass_by_obj=True)
 
-	self.naero = naero
-	self.deriv_options['form'] = 'central'
-	self.deriv_options['step_calc'] = 'relative'
+        self.naero = naero
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
         
     def solve_nonlinear(self, params, unknowns, resids):
 
@@ -274,9 +274,9 @@ class CCBladeLoads(Component):
         self.add_param('wakerotation', val=True, desc='include effect of wake rotation (i.e., tangential induction factor is nonzero)', pass_by_obj=True)
         self.add_param('usecd', val=True, desc='use drag coefficient in computing induction factors', pass_by_obj=True)
 
-	self.naero = naero
-	self.deriv_options['form'] = 'central'
-	self.deriv_options['step_calc'] = 'relative'
+        self.naero = naero
+        self.deriv_options['form'] = 'central'
+        self.deriv_options['step_calc'] = 'relative'
         
     def solve_nonlinear(self, params, unknowns, resids):
 

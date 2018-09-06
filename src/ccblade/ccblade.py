@@ -29,6 +29,7 @@ limitations under the License.
 
 """
 
+from __future__ import print_function
 import numpy as np
 from math import pi, radians, sin, cos
 from scipy.optimize import brentq
@@ -45,7 +46,7 @@ import _bem
 # ------------------
 
 
-class CCAirfoil:
+class CCAirfoil(object):
     """A helper class to evaluate airfoil data using a continuously
     differentiable cubic spline"""
 
@@ -164,7 +165,7 @@ class CCAirfoil:
 # ------------------
 
 
-class CCBlade:
+class CCBlade(object):
 
     def __init__(self, r, chord, theta, af, Rhub, Rtip, B=3, rho=1.225, mu=1.81206e-5,
                  precone=0.0, tilt=0.0, yaw=0.0, shearExp=0.2, hubHt=80.0,
@@ -1041,7 +1042,7 @@ if __name__ == '__main__':
 
     CP, CT, CQ = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=True)
 
-    print CP, CT, CQ
+    print(CP, CT, CQ)
 
 
     tsr = np.linspace(2, 14, 50)
