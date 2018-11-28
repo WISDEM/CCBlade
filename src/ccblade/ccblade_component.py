@@ -135,17 +135,7 @@ class CCBladePower(Component):
         self.Omega = params['Omega']
         self.pitch = params['pitch']
         
-        if len(self.precurve) == 0:
-            self.precurve = np.zeros_like(self.r)
-
-        # airfoil files
-        n = len(self.airfoils)
-        af = self.airfoils
-        # af = [0]*n
-        # for i in range(n):
-        #     af[i] = CCAirfoil.initFromAerodynFile(self.airfoil_files[i])
-
-        self.ccblade = CCBlade(self.r, self.chord, self.theta, af, self.Rhub, self.Rtip, self.B,
+        self.ccblade = CCBlade(self.r, self.chord, self.theta, self.airfoils, self.Rhub, self.Rtip, self.B,
             self.rho, self.mu, self.precone, self.tilt, self.yaw, self.shearExp, self.hubHt,
             self.nSector, self.precurve, self.precurveTip, tiploss=self.tiploss, hubloss=self.hubloss,
             wakerotation=self.wakerotation, usecd=self.usecd, derivatives=True)

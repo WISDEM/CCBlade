@@ -30,7 +30,7 @@ limitations under the License.
 """
 
 import numpy as np
-from math import pi, radians, sin, cos
+from math import pi, radians, sin, cos, isnan
 from scipy.optimize import brentq
 from scipy.interpolate import RectBivariateSpline, bisplev
 from zope.interface import Interface, implements
@@ -121,6 +121,7 @@ class CCAirfoil:
         # a small amount of smoothing is used to prevent spurious multiple solutions
         self.cl_spline = RectBivariateSpline(alpha, Re, cl, kx=kx, ky=ky, s=0.1)
         self.cd_spline = RectBivariateSpline(alpha, Re, cd, kx=kx, ky=ky, s=0.001)
+        self.alpha     = alpha
 
 
     @classmethod
@@ -142,6 +143,40 @@ class CCAirfoil:
         af = Airfoil.initFromAerodynFile(aerodynFile)
         alpha, Re, cl, cd, cm = af.createDataGrid()
         return cls(alpha, Re, cl, cd)
+
+    
+    def max_eff(self, Re):
+        # Get the angle of attack, cl and cd at max airfoil efficiency. For a cylinder, set the angle of attack to 0
+        
+        Eff         = np.zeros_like(self.alpha)
+        
+        # Check efficiency only between -20 and +40 deg
+        aoa_start   = -20.
+        aoa_end     = 40
+        i_start     = np.argmin(abs(self.alpha - (aoa_start * np.pi / 180.)))
+        i_end       = np.argmin(abs(self.alpha - (aoa_end * np.pi / 180.)))
+
+        if len(self.alpha[i_start:i_end]) == 0: # Cylinder
+            alpha_Emax  = 0.
+            cl_Emax     = self.cl_spline.ev(alpha_Emax, Re)
+            cd_Emax     = self.cd_spline.ev(alpha_Emax, Re)
+            Emax = cl_Emax/cd_Emax
+
+        else:
+            alpha = np.linspace(aoa_start*np.pi/180., aoa_end*np.pi/180., num=201)
+            cl = [self.cl_spline.ev(aoa, Re) for aoa in alpha]
+            cd = [self.cd_spline.ev(aoa, Re) for aoa in alpha]
+            Eff = [cli/cdi for cli, cdi, in zip(cl, cd)]
+
+            i_max = np.argmax(Eff)
+            alpha_Emax  = alpha[i_max]
+            cl_Emax     = cl[i_max]
+            cd_Emax     = cd[i_max]
+            Emax        = Eff[i_max]
+
+        # print Emax, alpha_Emax*180./np.pi, cl_Emax, cd_Emax
+
+        return Emax, alpha_Emax, cl_Emax, cd_Emax
 
 
     def evaluate(self, alpha, Re):
@@ -318,6 +353,9 @@ class CCBlade:
             self.nSector = max(4, nSector)  # at least 4 are necessary
 
 
+        self.inverse_analysis = False
+
+
     # residual
     def __runBEM(self, phi, r, chord, theta, af, Vx, Vy):
         """residual of BEM method and other corresponding variables"""
@@ -335,11 +373,35 @@ class CCBlade:
 
         return fzero, a, ap
 
-
     def __errorFunction(self, phi, r, chord, theta, af, Vx, Vy):
-        """strip other outputs leaving only residual for Brent's method"""
+        """strip other outputs leaving only residual for Brent's method
+        Standard use case, geometry is known
+        """
 
         fzero, a, ap = self.__runBEM(phi, r, chord, theta, af, Vx, Vy)
+
+        return fzero
+
+    def __runBEM_inverse(self, phi, r, chord, cl, cd, af, Vx, Vy):
+        """residual of BEM method and other corresponding variables
+        """
+
+        a = 0.0
+        ap = 0.0
+        for i in range(self.iterRe):
+
+            fzero, a, ap = _bem.inductionfactors(r, chord, self.Rhub, self.Rtip, phi,
+                                                 cl, cd, self.B, Vx, Vy, **self.bemoptions)
+
+        return fzero, a, ap
+
+
+    def __errorFunction_inverse(self, phi, r, chord, cl, cd, af, Vx, Vy):
+        """strip other outputs leaving only residual for Brent's method
+        Parametric optimization use case, desired Cl/Cd is known, solve for twist
+        """
+
+        fzero, a, ap = self.__runBEM_inverse(phi, r, chord, cl, cd, af, Vx, Vy)
 
         return fzero
 
@@ -545,14 +607,21 @@ class CCBlade:
         dNp_dz = np.zeros((6, n))
         dTp_dz = np.zeros((6, n))
 
-        errf = self.__errorFunction
+        if self.inverse_analysis == True:
+            errf = self.__errorFunction_inverse
+            self.theta = np.zeros_like(self.r)
+        else:
+            errf = self.__errorFunction
         rotating = (Omega != 0)
 
         # ---------------- loop across blade ------------------
         for i in range(n):
 
             # index dependent arguments
-            args = (self.r[i], self.chord[i], self.theta[i], self.af[i], Vx[i], Vy[i])
+            if self.inverse_analysis == True:
+                args = (self.r[i], self.chord[i], self.cl[i], self.cd[i], self.af[i], Vx[i], Vy[i])
+            else:
+                args = (self.r[i], self.chord[i], self.theta[i], self.af[i], Vx[i], Vy[i])
 
             if not rotating:  # non-rotating
 
@@ -586,9 +655,18 @@ class CCBlade:
 
                 # ----------------------------------------------------------------
 
+            if self.inverse_analysis == True:
+                self.theta[i]   = phi_star - self.alpha[i] - self.pitch # rad
+                args = (self.r[i], self.chord[i], self.theta[i], self.af[i], Vx[i], Vy[i])
+
             # derivatives of residual
 
             Np[i], Tp[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
+
+            if isnan(Np[i]):
+                Np[i] = 0.
+                Tp[i] = 0.
+                print('warning, BEM convergence error, setting Np[%d] = Tp[%d] = 0.' % (i,i))
 
             if self.derivatives:
                 # separate state vars from design vars
