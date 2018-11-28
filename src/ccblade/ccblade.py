@@ -29,11 +29,11 @@ limitations under the License.
 
 """
 
+from __future__ import print_function
 import numpy as np
 from math import pi, radians, sin, cos, isnan
 from scipy.optimize import brentq
 from scipy.interpolate import RectBivariateSpline, bisplev
-from zope.interface import Interface, implements
 import warnings
 
 from airfoilprep import Airfoil
@@ -42,47 +42,13 @@ import _bem
 
 
 # ------------------
-#  Interfaces
-# ------------------
-
-
-class AirfoilInterface(Interface):
-    """Interface for airfoil aerodynamic analysis."""
-
-    def evaluate(alpha, Re):
-        """Get lift/drag coefficient at the specified angle of attack and Reynolds number
-
-        Parameters
-        ----------
-        alpha : float (rad)
-            angle of attack
-        Re : float
-            Reynolds number
-
-        Returns
-        -------
-        cl : float
-            lift coefficient
-        cd : float
-            drag coefficient
-
-        Notes
-        -----
-        Any implementation can be used, but to keep the smooth properties
-        of CCBlade, the implementation should be C1 continuous.
-
-        """
-
-
-# ------------------
 #  Airfoil Class
 # ------------------
 
 
-class CCAirfoil:
+class CCAirfoil(object):
     """A helper class to evaluate airfoil data using a continuously
     differentiable cubic spline"""
-    implements(AirfoilInterface)
 
 
     def __init__(self, alpha, Re, cl, cd):
@@ -234,7 +200,7 @@ class CCAirfoil:
 # ------------------
 
 
-class CCBlade:
+class CCBlade(object):
 
     def __init__(self, r, chord, theta, af, Rhub, Rtip, B=3, rho=1.225, mu=1.81206e-5,
                  precone=0.0, tilt=0.0, yaw=0.0, shearExp=0.2, hubHt=80.0,
@@ -252,8 +218,6 @@ class CCBlade:
         theta : array_like (deg)
             corresponding :ref:`twist angle <blade_airfoil_coord>` at each section---
             positive twist decreases angle of attack.
-        af : list(AirfoilInterface)
-            list of :ref:`AirfoilInterface <airfoil-interface-label>` objects at each section
         Rhub : float (m)
             location of hub
         Rtip : float (m)
@@ -1156,7 +1120,7 @@ if __name__ == '__main__':
 
     CP, CT, CQ = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=True)
 
-    print CP, CT, CQ
+    print(CP, CT, CQ)
 
 
     tsr = np.linspace(2, 14, 50)

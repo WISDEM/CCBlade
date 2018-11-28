@@ -16,7 +16,7 @@ setup(
     py_modules=['ccblade'],
     package_data={'ccblade': []},
     packages=['ccblade'],
-    install_requires=['airfoilprep.py>=0.1'],  # , 'zope.interface'],
+    install_requires=['airfoilprep.py>=0.1'],
     # test_suite='test.test_ccblade.py',
     license='Apache License, Version 2.0',
     ext_modules=[Extension('_bem', ['src/ccblade/bem.f90'], extra_compile_args=['-O2'])],
