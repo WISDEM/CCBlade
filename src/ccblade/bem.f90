@@ -286,7 +286,7 @@ end subroutine windComponents
 
 
 subroutine thrustTorque(n, Np, Tp, r, precurve, presweep, precone, &
-    Rhub, Rtip, precurveTip, presweepTip, T, Q)
+    Rhub, Rtip, precurveTip, presweepTip, T, Q, M)
 
     implicit none
 
@@ -298,12 +298,12 @@ subroutine thrustTorque(n, Np, Tp, r, precurve, presweep, precone, &
     real(dp), intent(in) :: precone, Rhub, Rtip, precurveTip, presweepTip
 
     ! out
-    real(dp), intent(out) :: T, Q
+    real(dp), intent(out) :: T, Q, M
 
     ! local
     real(dp) :: ds
     real(dp), dimension(n+2) :: rfull, curvefull, sweepfull, Npfull, Tpfull
-    real(dp), dimension(n+2) :: thrust, torque, x_az, y_az, z_az, cone, s
+    real(dp), dimension(n+2) :: thrust, torque, flap_moment, x_az, y_az, z_az, cone, s
     integer :: i
 
 
@@ -334,14 +334,16 @@ subroutine thrustTorque(n, Np, Tp, r, precurve, presweep, precone, &
 
 
     ! integrate Thrust and Torque (trapezoidal)
-    thrust = Npfull*cos(cone)
-    torque = Tpfull*z_az
-
+    thrust      = Npfull*cos(cone)
+    torque      = Tpfull*z_az
+    flap_moment = Npfull*z_az
+    
     T = 0.0_dp
     do i = 1, n+1
         ds = s(i+1) - s(i)
         T = T + 0.5_dp*(thrust(i) + thrust(i+1))*ds
         Q = Q + 0.5_dp*(torque(i) + torque(i+1))*ds
+        M = M + 0.5_dp*(flap_moment(i) + flap_moment(i+1))*ds
     end do
 
 

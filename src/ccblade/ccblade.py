@@ -809,6 +809,7 @@ class CCBlade(object):
         T = np.zeros(npts)
         Q = np.zeros(npts)
         P = np.zeros(npts)
+        M = np.zeros(npts)
 
         if self.derivatives:
             dT_ds = np.zeros((npts, 11))
@@ -838,15 +839,17 @@ class CCBlade(object):
                     dQ_dv[i, :, :] += self.B * dQ_dv_sub / nsec
 
 
-                Tsub, Qsub = _bem.thrusttorque(Np, Tp, *args)
+                Tsub, Qsub, Msub = _bem.thrusttorque(Np, Tp, *args)
 
                 T[i] += self.B * Tsub / nsec
                 Q[i] += self.B * Qsub / nsec
+                M[i] += Msub / nsec
 
 
         # Power
         P = Q * Omega*pi/30.0  # RPM to rad/s
-
+        
+        
         # normalize if necessary
         if coefficient:
             q = 0.5 * self.rho * Uinf**2
@@ -854,6 +857,7 @@ class CCBlade(object):
             CP = P / (q * A * Uinf)
             CT = T / (q * A)
             CQ = Q / (q * self.rotorR * A)
+            CM = M / (q * self.rotorR * A)
 
             if self.derivatives:
 
@@ -888,7 +892,7 @@ class CCBlade(object):
                 return CP, CT, CQ, dCP, dCT, dCQ
 
             else:
-                return CP, CT, CQ
+                return CP, CT, CQ, CM
 
 
         if self.derivatives:
