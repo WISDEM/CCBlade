@@ -630,7 +630,7 @@ class CCBlade(object):
             if isnan(Np[i]):
                 Np[i] = 0.
                 Tp[i] = 0.
-                print('warning, BEM convergence error, setting Np[%d] = Tp[%d] = 0.' % (i,i))
+                # print('warning, BEM convergence error, setting Np[%d] = Tp[%d] = 0.' % (i,i))
 
             if self.derivatives:
                 # separate state vars from design vars
@@ -843,7 +843,7 @@ class CCBlade(object):
 
                 T[i] += self.B * Tsub / nsec
                 Q[i] += self.B * Qsub / nsec
-                M[i] += Msub / nsec
+                M[i] += self.B * Msub / nsec
 
 
         # Power
