@@ -140,6 +140,42 @@ class CCAirfoil(object):
         # print Emax, alpha_Emax*180./np.pi, cl_Emax, cd_Emax
 
         return Emax, alpha_Emax, cl_Emax, cd_Emax
+        
+        
+    def awayfromstall(self, Re, margin):
+        # Get the angle of attack, cl and cd with a margin (in degrees) from the stall point. For a cylinder, set the angle of attack to 0 deg
+        
+        # Eff         = np.zeros_like(self.alpha)
+        
+        # Look for stall only between -20 and +40 deg
+        aoa_start   = -20.
+        aoa_end     = 40
+        i_start     = np.argmin(abs(self.alpha - (aoa_start * np.pi / 180.)))
+        i_end       = np.argmin(abs(self.alpha - (aoa_end * np.pi / 180.)))
+
+        if len(self.alpha[i_start:i_end]) == 0: # Cylinder
+            alpha_op   = 0.
+
+        else:
+            alpha   = np.linspace(aoa_start*np.pi/180., aoa_end*np.pi/180., num=201)
+            cl      = [self.cl_spline.ev(aoa, Re) for aoa in alpha]
+            cd      = [self.cd_spline.ev(aoa, Re) for aoa in alpha]
+            
+            i_stall = np.argmax(cl)
+            alpha_stall  = alpha[i_stall]
+            alpha_op     = alpha_stall - margin*np.pi/180.
+        
+        cl_op      = self.cl_spline.ev(alpha_op, Re)
+        cd_op      = self.cd_spline.ev(alpha_op, Re)
+        Eff_op     = cl_op/cd_op
+            
+            
+        # print Emax, alpha_Emax*180./np.pi, cl_Emax, cd_Emax
+
+        return Eff_op, alpha_op, cl_op, cd_op
+        
+        
+        
 
 
     def evaluate(self, alpha, Re, return_cm=False):
