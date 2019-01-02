@@ -141,8 +141,8 @@ class CCBladePower(Component):
             wakerotation=self.wakerotation, usecd=self.usecd, derivatives=True)
 
         # power, thrust, torque
-        self.P, self.T, self.Q, self.dP, self.dT, self.dQ \
-            = self.ccblade.evaluate(self.Uhub, self.Omega, self.pitch, coefficient=False)
+        self.P, self.T, self.Q, self.M, self.dP, self.dT, self.dQ \
+            = self.ccblade.evaluate(self.Uhub, self.Omega, self.pitch, coefficients=False)
         unknowns['T'] = self.T
         unknowns['Q'] = self.Q
         unknowns['P'] = self.P

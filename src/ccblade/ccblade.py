@@ -921,7 +921,7 @@ class CCBlade(object):
 
 
 
-    def evaluate(self, Uinf, Omega, pitch, coefficient=False):
+    def evaluate(self, Uinf, Omega, pitch, coefficients=False):
         """Run the aerodynamic analysis at the specified conditions.
         Parameters
         ----------
@@ -1029,7 +1029,7 @@ class CCBlade(object):
         
         
         # normalize if necessary
-        if coefficient:
+        if coefficients:
             q = 0.5 * self.rho * Uinf**2
             A = pi * self.rotorR**2
             CP = P / (q * A * Uinf)
@@ -1067,10 +1067,7 @@ class CCBlade(object):
                 # pack derivatives into dictionary
                 dCT, dCQ, dCP = self.__thrustTorqueDictionary(dCT_ds, dCQ_ds, dCP_ds, dCT_dv, dCQ_dv, dCP_dv, npts)
 
-                return CP, CT, CQ, dCP, dCT, dCQ
 
-            else:
-                return CP, CT, CQ, CM
 
 
         if self.derivatives:
@@ -1083,11 +1080,19 @@ class CCBlade(object):
 
             # pack derivatives into dictionary
             dT, dQ, dP = self.__thrustTorqueDictionary(dT_ds, dQ_ds, dP_ds, dT_dv, dQ_dv, dP_dv, npts)
-
-            return P, T, Q, dP, dT, dQ
-
+        
+        
+        if coefficients:
+            if self.derivatives:
+                return P, T, Q, M, dP, dT, dQ, CP, CT, CQ, CM, dCP, dCT, dCQ
+            else:
+                return P, T, Q, M, CP, CT, CQ, CM
         else:
-            return P, T, Q
+            if self.derivatives:
+                return P, T, Q, M, dP, dT, dQ
+            else:
+                return P, T, Q, M
+
 
 
 
