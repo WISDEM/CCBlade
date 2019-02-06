@@ -224,10 +224,10 @@ class CCBladeLoads(Component):
         self.add_param('azimuth_load', val=0.0, units='deg', desc='blade azimuthal location')
 
         # outputs
-        self.add_output('loads_r', val=np.zeros(naero+2), units='m', desc='radial positions along blade going toward tip')
-        self.add_output('loads_Px', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned x-direction')
-        self.add_output('loads_Py', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned y-direction')
-        self.add_output('loads_Pz', val=np.zeros(naero+2), units='N/m', desc='distributed loads in blade-aligned z-direction')
+        self.add_output('loads_r', val=np.zeros(naero), units='m', desc='radial positions along blade going toward tip')
+        self.add_output('loads_Px', val=np.zeros(naero), units='N/m', desc='distributed loads in blade-aligned x-direction')
+        self.add_output('loads_Py', val=np.zeros(naero), units='N/m', desc='distributed loads in blade-aligned y-direction')
+        self.add_output('loads_Pz', val=np.zeros(naero), units='N/m', desc='distributed loads in blade-aligned z-direction')
 
         # corresponding setting for loads
         self.add_output('loads_V', val=0.0, units='m/s', desc='hub height wind speed')
@@ -317,9 +317,7 @@ class CCBladeLoads(Component):
             = self.ccblade.distributedAeroLoads(self.V_load, self.Omega_load, self.pitch_load, self.azimuth_load)
 
         # concatenate loads at root/tip
-        unknowns['loads_r'] = np.concatenate([[self.Rhub], self.r, [self.Rtip]])
-        Np = np.concatenate([[0.0], Np, [0.0]])
-        Tp = np.concatenate([[0.0], Tp, [0.0]])
+        unknowns['loads_r'] = self.r
 
         # conform to blade-aligned coordinate system
         unknowns['loads_Px'] = Np
