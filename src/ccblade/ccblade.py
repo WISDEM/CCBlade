@@ -339,7 +339,7 @@ class CCAirfoil(object):
         unsteady['k1']      = 0
         unsteady['k2']      = 0
         unsteady['k3']      = 0
-        unsteady['k1']      = 0
+        unsteady['k1_hat']  = 0
         unsteady['x_cp_bar']   = "Default"
         unsteady['UACutout']   = "Default"
         unsteady['filtCutOff'] = "Default"
