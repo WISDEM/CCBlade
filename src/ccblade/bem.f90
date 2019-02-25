@@ -57,13 +57,15 @@ subroutine inductionFactors(r, chord, Rhub, Rtip, phi, cl, cd, B, &
     ! Prandtl's tip and hub loss factor
     Ftip = 1.0_dp
     if ( tipLoss ) then
-        factortip = B/2.0_dp*(Rtip - r)/(r*abs(sphi))
+        ! factortip = B/2.0_dp*(Rtip - r)/(r*abs(sphi))
+        factortip = B/2.0_dp*(Rtip - r)/(r*sphi)
         Ftip = 2.0_dp/pi*acos(exp(-factortip))
     end if
 
     Fhub = 1.0_dp
     if ( hubLoss ) then
-        factorhub = B/2.0_dp*(r - Rhub)/(Rhub*abs(sphi))
+        ! factorhub = B/2.0_dp*(r - Rhub)/(Rhub*abs(sphi))
+        factorhub = B/2.0_dp*(r - Rhub)/(Rhub*sphi)
         Fhub = 2.0_dp/pi*acos(exp(-factorhub))
     end if
 
