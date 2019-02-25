@@ -103,7 +103,7 @@ class TestNREL5MW(unittest.TestCase):
         tilt = 5*math.pi/180.0
         Tref -= m_rotor*g*math.sin(tilt)  # remove weight of rotor that is included in reported results
 
-        P, T, Q = self.rotor.evaluate(Uinf, Omega, pitch)
+        P, T, Q, M = self.rotor.evaluate(Uinf, Omega, pitch)
 
         # import matplotlib.pyplot as plt
         # plt.plot(Uinf, P/1e6)
