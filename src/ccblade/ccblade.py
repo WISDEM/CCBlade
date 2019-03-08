@@ -344,6 +344,11 @@ class CCAirfoil(object):
         unsteady['UACutout']   = "Default"
         unsteady['filtCutOff'] = "Default"
 
+        unsteady['Alpha']    = alpha
+        unsteady['Cl']    = cl
+        unsteady['Cd']    = cd
+        unsteady['Cm']    = cm
+
         self.unsteady = unsteady
 
         # import matplotlib.pyplot as plt
