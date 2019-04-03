@@ -1,22 +1,22 @@
+# CCBlade
+
 A blade element momentum method for analyzing wind turbine aerodynamic performance that is robust (guaranteed convergence), fast (superlinear convergence rate), and smooth (continuously differentiable).  Analytic gradients are also (optionally) provided for the distributed loads, thrust, torque, and power with respect to design variables of interest.
 
-Author: [S. Andrew Ning](mailto:andrew.ning@nrel.gov)
+Author: [NREL WISDEM Team](mailto:systems.engineering@nrel.gov) 
 
-## Detailed Documentation
+## Documentation
 
-Open a local copy of the documentation at `docs/_build/html/index.html`.  Or access the online version at <http://wisdem.github.io/CCBlade/>
+See local documentation in the `docs`-directory or access the online version at <http://wisdem.github.io/CCBlade/>
 
 ## Prerequisites
 
-Fortran compiler, NumPy, SciPy, zope.interface
+pyMAP requires a Fortran compiler
 
 ## Installation
 
-Install CCBlade with the following command.
+For detailed installation instructions of WISDEM modules see <https://github.com/WISDEM/WISDEM> or to install CCBlade by itself do:
 
     $ python setup.py install
-
-Note that the installation also includes AirfoilPrep.py.  Though not strictly necessary to use with CCBlade, it is convenient when working with AeroDyn input files or doing any aerodynamic preprocessing of airfoil data.
 
 ## Run Unit Tests
 

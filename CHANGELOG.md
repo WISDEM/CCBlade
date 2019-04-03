@@ -1,5 +1,12 @@
 # CCBlade Changelog
 
+## 1.2.0 (Dec 18, 2019)
+
+Pietro Bortolotti<pietro.bortolotti@nrel.gov>
+
+- Alternative solution formulation using Cl and Cd
+
+
 ## 1.1.1 (Apr 15, 2013)
 
 Andrew Ning <andrew.ning@nrel.gov>
