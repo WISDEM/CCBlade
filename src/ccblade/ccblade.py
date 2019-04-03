@@ -285,7 +285,7 @@ class CCAirfoil(object):
         # Cn1
         idx_alpha0  = np.argmin(abs(alpha-unsteady['alpha0']))
         if max(np.abs(np.gradient(cm)))>0.:
-            aoa_h = alpha[idx_alpha0]+25.
+            aoa_h = alpha[idx_alpha0]+35.
             idx_high = np.argmin(abs(alpha-aoa_h))
 
             cm_temp = cm[idx_low:idx_high]
@@ -317,6 +317,7 @@ class CCAirfoil(object):
         if max(np.abs(np.gradient(cm)))>0.:
             # unsteady['C_nalpha'] = np.gradient(cn, alpha_rad)[idx_alpha0]
             unsteady['C_nalpha'] = max(np.gradient(cn[idx_alpha0:idx_Cn1], alpha_rad[idx_alpha0:idx_Cn1]))
+
         else:
             unsteady['C_nalpha'] = 0.
 
@@ -343,6 +344,11 @@ class CCAirfoil(object):
         unsteady['x_cp_bar']   = "Default"
         unsteady['UACutout']   = "Default"
         unsteady['filtCutOff'] = "Default"
+
+        unsteady['Alpha']    = alpha
+        unsteady['Cl']    = cl
+        unsteady['Cd']    = cd
+        unsteady['Cm']    = cm
 
         self.unsteady = unsteady
 
