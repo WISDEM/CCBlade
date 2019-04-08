@@ -1,35 +1,25 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>4. Module Documentation &mdash; CCBlade 1.1.0 documentation</title>
-    
+    <title>4. Module Documentation &#8212; CCBlade 1.1.0 documentation</title>
     <link rel="stylesheet" href="_static/nrel.css" type="text/css" />
     <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    './',
-        VERSION:     '1.1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="./" src="_static/documentation_options.js"></script>
     <script type="text/javascript" src="_static/jquery.js"></script>
     <script type="text/javascript" src="_static/underscore.js"></script>
     <script type="text/javascript" src="_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="CCBlade 1.1.0 documentation" href="index.html" />
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
     <link rel="next" title="5. Theory" href="theory.html" />
     <link rel="prev" title="3. Tutorial" href="tutorial.html" /> 
-  </head>
-  <body>
-    <div class="related">
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -41,63 +31,22 @@
         <li class="right" >
           <a href="tutorial.html" title="3. Tutorial"
              accesskey="P">previous</a> |</li>
-        <li><a href="index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">CCBlade 1.1.0 documentation</a> &#187;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <span class="target" id="module-ccblade"></span><div class="section" id="module-documentation">
 <span id="interfaces-label"></span><h1>4. Module Documentation<a class="headerlink" href="#module-documentation" title="Permalink to this headline">¶</a></h1>
-<p>The main methodology is contained in <a class="reference internal" href="#ccblade-class-label"><em>CCBlade</em></a>.  Airfoil data is provided by any object that implements <a class="reference internal" href="#airfoil-interface-label"><em>AirfoilInterface</em></a>.  The helper class <a class="reference internal" href="#ccairfoil-class-label"><em>CCAirfoil</em></a> is provided as a useful default implementation for AirfoilInterface.  If CCAirfoil is not used, the user must provide an implementation that produces <span class="math">\(C^1\)</span> continuous output (or else accept non-smooth aerodynamic calculations from CCBlade).  Some of the underlying implementation for CCBlade is written in Fortran for computational efficiency.</p>
+<p>The main methodology is contained in <a class="reference internal" href="#ccblade-class-label"><span class="std std-ref">CCBlade</span></a>.  Airfoil data is provided by any object that implements <a class="reference internal" href="#airfoil-interface-label"><span class="std std-ref">AirfoilInterface</span></a>.  The helper class <a class="reference internal" href="#ccairfoil-class-label"><span class="std std-ref">CCAirfoil</span></a> is provided as a useful default implementation for AirfoilInterface.  If CCAirfoil is not used, the user must provide an implementation that produces <span class="math notranslate nohighlight">\(C^1\)</span> continuous output (or else accept non-smooth aerodynamic calculations from CCBlade).  Some of the underlying implementation for CCBlade is written in Fortran for computational efficiency.</p>
 <div class="section" id="airfoil-interface">
 <span id="airfoil-interface-label"></span><h2>4.1. Airfoil Interface<a class="headerlink" href="#airfoil-interface" title="Permalink to this headline">¶</a></h2>
-<p>The airfoil objects used in CCBlade need only implement the following evaluate() method.  Although using <a class="reference internal" href="#ccairfoil-class-label"><em>CCAirfoil</em></a> for the implementation is recommended, any custom class can be used.</p>
+<p>The airfoil objects used in CCBlade need only implement the following evaluate() method.  Although using <a class="reference internal" href="#ccairfoil-class-label"><span class="std std-ref">CCAirfoil</span></a> for the implementation is recommended, any custom class can be used.</p>
 <p class="rubric">Class Summary:</p>
-<dl class="interface">
-<dt id="ccblade.AirfoilInterface">
-<em class="property">interface </em><tt class="descclassname">ccblade.</tt><tt class="descname">AirfoilInterface</tt><a class="reference internal" href="_modules/ccblade.html#AirfoilInterface"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccblade.AirfoilInterface" title="Permalink to this definition">¶</a></dt>
-<dd><p>Interface for airfoil aerodynamic analysis.</p>
-<dl class="method">
-<dt id="ccblade.AirfoilInterface.evaluate">
-<tt class="descname">evaluate</tt><big>(</big><em>alpha</em>, <em>Re</em><big>)</big><a class="reference internal" href="_modules/ccblade.html#AirfoilInterface.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccblade.AirfoilInterface.evaluate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Get lift/drag coefficient at the specified angle of attack and Reynolds number</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>alpha</strong> : float (rad)</p>
-<blockquote>
-<div><p>angle of attack</p>
-</div></blockquote>
-<p><strong>Re</strong> : float</p>
-<blockquote>
-<div><p>Reynolds number</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>cl</strong> : float</p>
-<blockquote>
-<div><p>lift coefficient</p>
-</div></blockquote>
-<p><strong>cd</strong> : float</p>
-<blockquote class="last">
-<div><p>drag coefficient</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Notes</p>
-<p>Any implementation can be used, but to keep the smooth properties
-of CCBlade, the implementation should be C1 continuous.</p>
-</dd></dl>
-
-</dd></dl>
-
 </div>
 <div class="section" id="ccairfoil-class">
 <span id="ccairfoil-class-label"></span><h2>4.2. CCAirfoil Class<a class="headerlink" href="#ccairfoil-class" title="Permalink to this headline">¶</a></h2>
@@ -130,36 +79,25 @@ of CCBlade, the implementation should be C1 continuous.</p>
 <p class="rubric">Class Summary:</p>
 <dl class="class">
 <dt>
-<em class="property">class </em><tt class="descclassname">ccblade.</tt><tt class="descname">CCAirfoil</tt><big>(</big><em>alpha</em>, <em>Re</em>, <em>cl</em>, <em>cd</em><big>)</big><a class="reference internal" href="_modules/ccblade.html#CCAirfoil"><span class="viewcode-link">[source]</span></a></dt>
-<dd><p>Setup CCAirfoil from raw airfoil data on a grid.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>alpha</strong> : array_like (deg)</p>
+<em class="property">class </em><code class="descclassname">ccblade.</code><code class="descname">CCAirfoil</code><span class="sig-paren">(</span><em>alpha</em>, <em>Re</em>, <em>cl</em>, <em>cd</em>, <em>cm=[]</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ccblade/ccblade.html#CCAirfoil"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Setup CCAirfoil from raw airfoil data on a grid.
+Parameters
+———-
+alpha : array_like (deg)</p>
 <blockquote>
-<div><p>angles of attack where airfoil data are defined
-(should be defined from -180 to +180 degrees)</p>
-</div></blockquote>
-<p><strong>Re</strong> : array_like</p>
-<blockquote>
-<div><p>Reynolds numbers where airfoil data are defined
-(can be empty or of length one if not Reynolds number dependent)</p>
-</div></blockquote>
-<p><strong>cl</strong> : array_like</p>
-<blockquote>
-<div><p>lift coefficient 2-D array with shape (alpha.size, Re.size)
-cl[i, j] is the lift coefficient at alpha[i] and Re[j]</p>
-</div></blockquote>
-<p><strong>cd</strong> : array_like</p>
-<blockquote class="last">
-<div><p>drag coefficient 2-D array with shape (alpha.size, Re.size)
-cd[i, j] is the drag coefficient at alpha[i] and Re[j]</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+<div>angles of attack where airfoil data are defined
+(should be defined from -180 to +180 degrees)</div></blockquote>
+<dl class="docutils">
+<dt>Re <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd>Reynolds numbers where airfoil data are defined
+(can be empty or of length one if not Reynolds number dependent)</dd>
+<dt>cl <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd>lift coefficient 2-D array with shape (alpha.size, Re.size)
+cl[i, j] is the lift coefficient at alpha[i] and Re[j]</dd>
+<dt>cd <span class="classifier-delimiter">:</span> <span class="classifier">array_like</span></dt>
+<dd>drag coefficient 2-D array with shape (alpha.size, Re.size)
+cd[i, j] is the drag coefficient at alpha[i] and Re[j]</dd>
+</dl>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -167,10 +105,10 @@ cd[i, j] is the drag coefficient at alpha[i] and Re[j]</p>
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="generated/ccblade.CCAirfoil.initFromAerodynFile.html#ccblade.CCAirfoil.initFromAerodynFile" title="ccblade.CCAirfoil.initFromAerodynFile"><tt class="xref py py-obj docutils literal"><span class="pre">initFromAerodynFile</span></tt></a></td>
-<td>convenience method for initializing with AeroDyn formatted files</td>
+<tr class="row-odd"><td><a class="reference internal" href="#ccblade.CCAirfoil.initFromAerodynFile" title="ccblade.CCAirfoil.initFromAerodynFile"><code class="xref py py-obj docutils literal notranslate"><span class="pre">initFromAerodynFile</span></code></a></td>
+<td>convenience method for initializing with AeroDyn formatted files Parameters ———- aerodynFile : str     location of AeroDyn style airfoiil file Returns ——- af : CCAirfoil     a constructed CCAirfoil object</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="generated/ccblade.CCAirfoil.evaluate.html#ccblade.CCAirfoil.evaluate" title="ccblade.CCAirfoil.evaluate"><tt class="xref py py-obj docutils literal"><span class="pre">evaluate</span></tt></a></td>
+<tr class="row-even"><td><a class="reference internal" href="#ccblade.CCAirfoil.evaluate" title="ccblade.CCAirfoil.evaluate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluate</span></code></a></td>
 <td>Get lift/drag coefficient at the specified angle of attack and Reynolds number.</td>
 </tr>
 </tbody>
@@ -184,126 +122,71 @@ cd[i, j] is the drag coefficient at alpha[i] and Re[j]</p>
 <p class="rubric">Class Summary:</p>
 <dl class="class">
 <dt>
-<em class="property">class </em><tt class="descclassname">ccblade.</tt><tt class="descname">CCBlade</tt><big>(</big><em>r</em>, <em>chord</em>, <em>theta</em>, <em>af</em>, <em>Rhub</em>, <em>Rtip</em>, <em>B=3</em>, <em>rho=1.225</em>, <em>mu=1.81206e-05</em>, <em>precone=0.0</em>, <em>tilt=0.0</em>, <em>yaw=0.0</em>, <em>shearExp=0.2</em>, <em>hubHt=80.0</em>, <em>nSector=8</em>, <em>precurve=None</em>, <em>precurveTip=0.0</em>, <em>presweep=None</em>, <em>presweepTip=0.0</em>, <em>tiploss=True</em>, <em>hubloss=True</em>, <em>wakerotation=True</em>, <em>usecd=True</em>, <em>iterRe=1</em>, <em>derivatives=False</em><big>)</big><a class="reference internal" href="_modules/ccblade.html#CCBlade"><span class="viewcode-link">[source]</span></a></dt>
-<dd><p>Constructor for aerodynamic rotor analysis</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>r</strong> : array_like (m)</p>
+<em class="property">class </em><code class="descclassname">ccblade.</code><code class="descname">CCBlade</code><span class="sig-paren">(</span><em>r</em>, <em>chord</em>, <em>theta</em>, <em>af</em>, <em>Rhub</em>, <em>Rtip</em>, <em>B=3</em>, <em>rho=1.225</em>, <em>mu=1.81206e-05</em>, <em>precone=0.0</em>, <em>tilt=0.0</em>, <em>yaw=0.0</em>, <em>shearExp=0.2</em>, <em>hubHt=80.0</em>, <em>nSector=8</em>, <em>precurve=None</em>, <em>precurveTip=0.0</em>, <em>presweep=None</em>, <em>presweepTip=0.0</em>, <em>tiploss=True</em>, <em>hubloss=True</em>, <em>wakerotation=True</em>, <em>usecd=True</em>, <em>iterRe=1</em>, <em>derivatives=False</em><span class="sig-paren">)</span><a class="reference internal" href="_modules/ccblade/ccblade.html#CCBlade"><span class="viewcode-link">[source]</span></a></dt>
+<dd><p>Constructor for aerodynamic rotor analysis
+Parameters
+———-
+r : array_like (m)</p>
 <blockquote>
-<div><p>locations defining the blade along z-axis of <a class="reference internal" href="csystem.html#azimuth-blade-coord"><em>blade coordinate system</em></a>
-(values should be increasing).</p>
-</div></blockquote>
-<p><strong>chord</strong> : array_like (m)</p>
-<blockquote>
-<div><p>corresponding chord length at each section</p>
-</div></blockquote>
-<p><strong>theta</strong> : array_like (deg)</p>
-<blockquote>
-<div><p>corresponding <a class="reference internal" href="csystem.html#blade-airfoil-coord"><em>twist angle</em></a> at each section&#8212;
-positive twist decreases angle of attack.</p>
-</div></blockquote>
-<p><strong>af</strong> : list(AirfoilInterface)</p>
-<blockquote>
-<div><p>list of <a class="reference internal" href="#airfoil-interface-label"><em>AirfoilInterface</em></a> objects at each section</p>
-</div></blockquote>
-<p><strong>Rhub</strong> : float (m)</p>
-<blockquote>
-<div><p>location of hub</p>
-</div></blockquote>
-<p><strong>Rtip</strong> : float (m)</p>
-<blockquote>
-<div><p>location of tip</p>
-</div></blockquote>
-<p><strong>B</strong> : int, optional</p>
-<blockquote>
-<div><p>number of blades</p>
-</div></blockquote>
-<p><strong>rho</strong> : float, optional (kg/m^3)</p>
-<blockquote>
-<div><p>freestream fluid density</p>
-</div></blockquote>
-<p><strong>mu</strong> : float, optional (kg/m/s)</p>
-<blockquote>
-<div><p>dynamic viscosity of fluid</p>
-</div></blockquote>
-<p><strong>precone</strong> : float, optional (deg)</p>
-<blockquote>
-<div><p><a class="reference internal" href="csystem.html#azimuth-blade-coord"><em>hub precone angle</em></a></p>
-</div></blockquote>
-<p><strong>tilt</strong> : float, optional (deg)</p>
-<blockquote>
-<div><p>nacelle <a class="reference internal" href="csystem.html#yaw-hub-coord"><em>tilt angle</em></a></p>
-</div></blockquote>
-<p><strong>yaw</strong> : float, optional (deg)</p>
-<blockquote>
-<div><p>nacelle <a class="reference internal" href="csystem.html#wind-yaw-coord"><em>yaw angle</em></a></p>
-</div></blockquote>
-<p><strong>shearExp</strong> : float, optional</p>
-<blockquote>
-<div><p>shear exponent for a power-law wind profile across hub</p>
-</div></blockquote>
-<p><strong>hubHt</strong> : float, optional</p>
-<blockquote>
-<div><p>hub height used for power-law wind profile.
-U = Uref*(z/hubHt)**shearExp</p>
-</div></blockquote>
-<p><strong>nSector</strong> : int, optional</p>
-<blockquote>
-<div><p>number of azimuthal sectors to descretize aerodynamic calculation.  automatically set to
-<tt class="docutils literal"><span class="pre">1</span></tt> if tilt, yaw, and shearExp are all 0.0.  Otherwise set to a minimum of 4.</p>
-</div></blockquote>
-<p><strong>precurve</strong> : array_like, optional (m)</p>
-<blockquote>
-<div><p>location of blade pitch axis in x-direction of <a class="reference internal" href="csystem.html#azimuth-blade-coord"><em>blade coordinate system</em></a></p>
-</div></blockquote>
-<p><strong>precurveTip</strong> : float, optional (m)</p>
-<blockquote>
-<div><p>location of blade pitch axis in x-direction at the tip (analogous to Rtip)</p>
-</div></blockquote>
-<p><strong>presweep</strong> : array_like, optional (m)</p>
-<blockquote>
-<div><p>location of blade pitch axis in y-direction of <a class="reference internal" href="csystem.html#azimuth-blade-coord"><em>blade coordinate system</em></a></p>
-</div></blockquote>
-<p><strong>presweepTip</strong> : float, optional (m)</p>
-<blockquote>
-<div><p>location of blade pitch axis in y-direction at the tip (analogous to Rtip)</p>
-</div></blockquote>
-<p><strong>tiploss</strong> : boolean, optional</p>
-<blockquote>
-<div><p>if True, include Prandtl tip loss model</p>
-</div></blockquote>
-<p><strong>hubloss</strong> : boolean, optional</p>
-<blockquote>
-<div><p>if True, include Prandtl hub loss model</p>
-</div></blockquote>
-<p><strong>wakerotation</strong> : boolean, optional</p>
-<blockquote>
-<div><p>if True, include effect of wake rotation (i.e., tangential induction factor is nonzero)</p>
-</div></blockquote>
-<p><strong>usecd</strong> : boolean, optional</p>
-<blockquote>
-<div><p>If True, use drag coefficient in computing induction factors
+<div>locations defining the blade along z-axis of <a class="reference internal" href="csystem.html#azimuth-blade-coord"><span class="std std-ref">blade coordinate system</span></a>
+(values should be increasing).</div></blockquote>
+<dl class="docutils">
+<dt>chord <span class="classifier-delimiter">:</span> <span class="classifier">array_like (m)</span></dt>
+<dd>corresponding chord length at each section</dd>
+<dt>theta <span class="classifier-delimiter">:</span> <span class="classifier">array_like (deg)</span></dt>
+<dd>corresponding <a class="reference internal" href="csystem.html#blade-airfoil-coord"><span class="std std-ref">twist angle</span></a> at each section—
+positive twist decreases angle of attack.</dd>
+<dt>Rhub <span class="classifier-delimiter">:</span> <span class="classifier">float (m)</span></dt>
+<dd>location of hub</dd>
+<dt>Rtip <span class="classifier-delimiter">:</span> <span class="classifier">float (m)</span></dt>
+<dd>location of tip</dd>
+<dt>B <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd>number of blades</dd>
+<dt>rho <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (kg/m^3)</span></dt>
+<dd>freestream fluid density</dd>
+<dt>mu <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (kg/m/s)</span></dt>
+<dd>dynamic viscosity of fluid</dd>
+<dt>precone <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (deg)</span></dt>
+<dd><a class="reference internal" href="csystem.html#azimuth-blade-coord"><span class="std std-ref">hub precone angle</span></a></dd>
+<dt>tilt <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (deg)</span></dt>
+<dd>nacelle <a class="reference internal" href="csystem.html#yaw-hub-coord"><span class="std std-ref">tilt angle</span></a></dd>
+<dt>yaw <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (deg)</span></dt>
+<dd>nacelle <a class="reference internal" href="csystem.html#wind-yaw-coord"><span class="std std-ref">yaw angle</span></a></dd>
+<dt>shearExp <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd>shear exponent for a power-law wind profile across hub</dd>
+<dt>hubHt <span class="classifier-delimiter">:</span> <span class="classifier">float, optional</span></dt>
+<dd>hub height used for power-law wind profile.
+U = Uref*(z/hubHt)**shearExp</dd>
+<dt>nSector <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd>number of azimuthal sectors to descretize aerodynamic calculation.  automatically set to
+<code class="docutils literal notranslate"><span class="pre">1</span></code> if tilt, yaw, and shearExp are all 0.0.  Otherwise set to a minimum of 4.</dd>
+<dt>precurve <span class="classifier-delimiter">:</span> <span class="classifier">array_like, optional (m)</span></dt>
+<dd>location of blade pitch axis in x-direction of <a class="reference internal" href="csystem.html#azimuth-blade-coord"><span class="std std-ref">blade coordinate system</span></a></dd>
+<dt>precurveTip <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (m)</span></dt>
+<dd>location of blade pitch axis in x-direction at the tip (analogous to Rtip)</dd>
+<dt>presweep <span class="classifier-delimiter">:</span> <span class="classifier">array_like, optional (m)</span></dt>
+<dd>location of blade pitch axis in y-direction of <a class="reference internal" href="csystem.html#azimuth-blade-coord"><span class="std std-ref">blade coordinate system</span></a></dd>
+<dt>presweepTip <span class="classifier-delimiter">:</span> <span class="classifier">float, optional (m)</span></dt>
+<dd>location of blade pitch axis in y-direction at the tip (analogous to Rtip)</dd>
+<dt>tiploss <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>if True, include Prandtl tip loss model</dd>
+<dt>hubloss <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>if True, include Prandtl hub loss model</dd>
+<dt>wakerotation <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>if True, include effect of wake rotation (i.e., tangential induction factor is nonzero)</dd>
+<dt>usecd <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>If True, use drag coefficient in computing induction factors
 (always used in evaluating distributed loads from the induction factors).
 Note that the default implementation may fail at certain points if drag is not included
-(see Section 4.2 in <a class="reference internal" href="theory.html#ning2013a-simple-soluti" id="id2">[4]</a>).  This can be worked around, but has
-not been implemented.</p>
-</div></blockquote>
-<p><strong>iterRe</strong> : int, optional</p>
-<blockquote>
-<div><p>The number of iterations to use to converge Reynolds number.  Generally iterRe=1 is sufficient,
+(see Section 4.2 in <a class="reference internal" href="theory.html#ning2013a-simple-soluti" id="id2">[1]</a>).  This can be worked around, but has
+not been implemented.</dd>
+<dt>iterRe <span class="classifier-delimiter">:</span> <span class="classifier">int, optional</span></dt>
+<dd>The number of iterations to use to converge Reynolds number.  Generally iterRe=1 is sufficient,
 but for high accuracy in Reynolds number effects, iterRe=2 iterations can be used.  More than that
-should not be necessary.  Gradients have only been implemented for the case iterRe=1.</p>
-</div></blockquote>
-<p><strong>derivatives</strong> : boolean, optional</p>
-<blockquote class="last">
-<div><p>if True, derivatives along with function values will be returned for the various methods</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
+should not be necessary.  Gradients have only been implemented for the case iterRe=1.</dd>
+<dt>derivatives <span class="classifier-delimiter">:</span> <span class="classifier">boolean, optional</span></dt>
+<dd>if True, derivatives along with function values will be returned for the various methods</dd>
+</dl>
 <p class="rubric">Methods</p>
 <table border="1" class="longtable docutils">
 <colgroup>
@@ -311,10 +194,10 @@ should not be necessary.  Gradients have only been implemented for the case iter
 <col width="90%" />
 </colgroup>
 <tbody valign="top">
-<tr class="row-odd"><td><a class="reference internal" href="generated/ccblade.CCBlade.distributedAeroLoads.html#ccblade.CCBlade.distributedAeroLoads" title="ccblade.CCBlade.distributedAeroLoads"><tt class="xref py py-obj docutils literal"><span class="pre">distributedAeroLoads</span></tt></a></td>
+<tr class="row-odd"><td><a class="reference internal" href="#ccblade.CCBlade.distributedAeroLoads" title="ccblade.CCBlade.distributedAeroLoads"><code class="xref py py-obj docutils literal notranslate"><span class="pre">distributedAeroLoads</span></code></a></td>
 <td>Compute distributed aerodynamic loads along blade.</td>
 </tr>
-<tr class="row-even"><td><a class="reference internal" href="generated/ccblade.CCBlade.evaluate.html#ccblade.CCBlade.evaluate" title="ccblade.CCBlade.evaluate"><tt class="xref py py-obj docutils literal"><span class="pre">evaluate</span></tt></a></td>
+<tr class="row-even"><td><a class="reference internal" href="#ccblade.CCBlade.evaluate" title="ccblade.CCBlade.evaluate"><code class="xref py py-obj docutils literal notranslate"><span class="pre">evaluate</span></code></a></td>
 <td>Run the aerodynamic analysis at the specified conditions.</td>
 </tr>
 </tbody>
@@ -328,7 +211,7 @@ should not be necessary.  Gradients have only been implemented for the case iter
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
   <h3><a href="index.html">Table Of Contents</a></h3>
   <ul>
@@ -346,29 +229,30 @@ should not be necessary.  Gradients have only been implemented for the case iter
   <h4>Next topic</h4>
   <p class="topless"><a href="theory.html"
                         title="next chapter">5. Theory</a></p>
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="_sources/documentation.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/documentation.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
@@ -380,13 +264,13 @@ should not be necessary.  Gradients have only been implemented for the case iter
         <li class="right" >
           <a href="tutorial.html" title="3. Tutorial"
              >previous</a> |</li>
-        <li><a href="index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="index.html">CCBlade 1.1.0 documentation</a> &#187;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2013, NREL.
-      Last updated on Jan 10, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2013, NREL.
+      Last updated on Apr 08, 2019.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.6.
     </div>
   </body>
 </html>

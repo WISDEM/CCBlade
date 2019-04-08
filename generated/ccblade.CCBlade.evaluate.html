@@ -1,117 +1,83 @@
+
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
   "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 
-
 <html xmlns="http://www.w3.org/1999/xhtml">
   <head>
+    <meta http-equiv="X-UA-Compatible" content="IE=Edge" />
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-    
-    <title>ccblade.CCBlade.evaluate &mdash; CCBlade 1.1.0 documentation</title>
-    
+    <title>ccblade.CCBlade.evaluate &#8212; CCBlade 1.1.0 documentation</title>
     <link rel="stylesheet" href="../_static/nrel.css" type="text/css" />
     <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-    
-    <script type="text/javascript">
-      var DOCUMENTATION_OPTIONS = {
-        URL_ROOT:    '../',
-        VERSION:     '1.1.0',
-        COLLAPSE_INDEX: false,
-        FILE_SUFFIX: '.html',
-        HAS_SOURCE:  true
-      };
-    </script>
+    <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
     <script type="text/javascript" src="../_static/jquery.js"></script>
     <script type="text/javascript" src="../_static/underscore.js"></script>
     <script type="text/javascript" src="../_static/doctools.js"></script>
-    <script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
-    <link rel="top" title="CCBlade 1.1.0 documentation" href="../index.html" /> 
-  </head>
-  <body>
-    <div class="related">
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.1/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" /> 
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              accesskey="I">index</a></li>
-        <li><a href="../index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">CCBlade 1.1.0 documentation</a> &#187;</li> 
       </ul>
     </div>  
 
     <div class="document">
       <div class="documentwrapper">
         <div class="bodywrapper">
-          <div class="body">
+          <div class="body" role="main">
             
   <div class="section" id="ccblade-ccblade-evaluate">
 <h1>ccblade.CCBlade.evaluate<a class="headerlink" href="#ccblade-ccblade-evaluate" title="Permalink to this headline">¶</a></h1>
 <dl class="method">
 <dt id="ccblade.CCBlade.evaluate">
-<tt class="descclassname">CCBlade.</tt><tt class="descname">evaluate</tt><big>(</big><em>Uinf</em>, <em>Omega</em>, <em>pitch</em>, <em>coefficient=False</em><big>)</big><a class="reference internal" href="../_modules/ccblade.html#CCBlade.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccblade.CCBlade.evaluate" title="Permalink to this definition">¶</a></dt>
-<dd><p>Run the aerodynamic analysis at the specified conditions.</p>
-<table class="docutils field-list" frame="void" rules="none">
-<col class="field-name" />
-<col class="field-body" />
-<tbody valign="top">
-<tr class="field-odd field"><th class="field-name">Parameters :</th><td class="field-body"><p class="first"><strong>Uinf</strong> : array_like (m/s)</p>
+<code class="descclassname">CCBlade.</code><code class="descname">evaluate</code><span class="sig-paren">(</span><em>Uinf</em>, <em>Omega</em>, <em>pitch</em>, <em>coefficients=False</em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/ccblade/ccblade.html#CCBlade.evaluate"><span class="viewcode-link">[source]</span></a><a class="headerlink" href="#ccblade.CCBlade.evaluate" title="Permalink to this definition">¶</a></dt>
+<dd><p>Run the aerodynamic analysis at the specified conditions.
+Parameters
+———-
+Uinf : array_like (m/s)</p>
 <blockquote>
-<div><p>hub height wind speed</p>
-</div></blockquote>
-<p><strong>Omega</strong> : array_like (RPM)</p>
-<blockquote>
-<div><p>rotor rotation speed</p>
-</div></blockquote>
-<p><strong>pitch</strong> : array_like (deg)</p>
-<blockquote>
-<div><p>blade pitch setting</p>
-</div></blockquote>
-<p><strong>coefficient</strong> : bool, optional</p>
-<blockquote>
-<div><p>if True, results are returned in nondimensional form</p>
-</div></blockquote>
-</td>
-</tr>
-<tr class="field-even field"><th class="field-name">Returns :</th><td class="field-body"><p class="first"><strong>P or CP</strong> : ndarray (W)</p>
-<blockquote>
-<div><p>power or power coefficient</p>
-</div></blockquote>
-<p><strong>T or CT</strong> : ndarray (N)</p>
-<blockquote>
-<div><p>thrust or thrust coefficient (magnitude)</p>
-</div></blockquote>
-<p><strong>Q or CQ</strong> : ndarray (N*m)</p>
-<blockquote>
-<div><p>torque or torque coefficient (magnitude)</p>
-</div></blockquote>
-<p><strong>dP or dCP</strong> : dictionary of arrays (present only if derivatives==True)</p>
-<blockquote>
-<div><p>derivatives of power or power coefficient.  Each item in dictionary is a Jacobian.
+<div>hub height wind speed</div></blockquote>
+<dl class="docutils">
+<dt>Omega <span class="classifier-delimiter">:</span> <span class="classifier">array_like (RPM)</span></dt>
+<dd>rotor rotation speed</dd>
+<dt>pitch <span class="classifier-delimiter">:</span> <span class="classifier">array_like (deg)</span></dt>
+<dd>blade pitch setting</dd>
+<dt>coefficient <span class="classifier-delimiter">:</span> <span class="classifier">bool, optional</span></dt>
+<dd>if True, results are returned in nondimensional form</dd>
+</dl>
+<dl class="docutils">
+<dt>P or CP <span class="classifier-delimiter">:</span> <span class="classifier">ndarray (W)</span></dt>
+<dd>power or power coefficient</dd>
+<dt>T or CT <span class="classifier-delimiter">:</span> <span class="classifier">ndarray (N)</span></dt>
+<dd>thrust or thrust coefficient (magnitude)</dd>
+<dt>Q or CQ <span class="classifier-delimiter">:</span> <span class="classifier">ndarray (N*m)</span></dt>
+<dd>torque or torque coefficient (magnitude)</dd>
+<dt>dP or dCP <span class="classifier-delimiter">:</span> <span class="classifier">dictionary of arrays (present only if derivatives==True)</span></dt>
+<dd>derivatives of power or power coefficient.  Each item in dictionary is a Jacobian.
 The array sizes and keys are below
 npts is the number of conditions (len(Uinf)),
-n = number of stations along blade (len(r))</p>
-<p>npts x 1: &#8216;dprecone&#8217;, &#8216;dtilt&#8217;, &#8216;dhubHt&#8217;, &#8216;dRhub&#8217;, &#8216;dRtip&#8217;, &#8216;dprecurveTip&#8217;, &#8216;dpresweepTip&#8217;, &#8216;dyaw&#8217;</p>
-<p>npts x npts: &#8216;dUinf&#8217;, &#8216;dOmega&#8217;, &#8216;dpitch&#8217;</p>
-<p>npts x n: &#8216;dr&#8217;, &#8216;dchord&#8217;, &#8216;dtheta&#8217;, &#8216;dprecurve&#8217;, &#8216;dpresweep&#8217;</p>
-<p>for example dP_dr = dP[&#8216;dr&#8217;]  (where dP_dr is an npts x n array)
-and dP_dr[i, j] = dP_i / dr_j</p>
-</div></blockquote>
-<p><strong>dT or dCT</strong> : dictionary of arrays (present only if derivatives==True)</p>
-<blockquote>
-<div><p>derivative of thrust or thrust coefficient.  Same format as dP and dCP</p>
-</div></blockquote>
-<p><strong>dQ or dCQ</strong> : dictionary of arrays (present only if derivatives==True)</p>
-<blockquote class="last">
-<div><p>derivative of torque or torque coefficient.  Same format as dP and dCP</p>
-</div></blockquote>
-</td>
-</tr>
-</tbody>
-</table>
-<p class="rubric">Notes</p>
-<p>CP = P / (q * Uinf * A)</p>
-<p>CT = T / (q * A)</p>
-<p>CQ = Q / (q * A * R)</p>
-<p>The rotor radius R, may not actually be Rtip if precone and precurve are both nonzero
-<tt class="docutils literal"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">Rtip*cos(precone)</span> <span class="pre">+</span> <span class="pre">precurveTip*sin(precone)</span></tt></p>
+n = number of stations along blade (len(r))
+npts x 1: ‘dprecone’, ‘dtilt’, ‘dhubHt’, ‘dRhub’, ‘dRtip’, ‘dprecurveTip’, ‘dpresweepTip’, ‘dyaw’
+npts x npts: ‘dUinf’, ‘dOmega’, ‘dpitch’
+npts x n: ‘dr’, ‘dchord’, ‘dtheta’, ‘dprecurve’, ‘dpresweep’
+for example dP_dr = dP[‘dr’]  (where dP_dr is an npts x n array)
+and dP_dr[i, j] = dP_i / dr_j</dd>
+<dt>dT or dCT <span class="classifier-delimiter">:</span> <span class="classifier">dictionary of arrays (present only if derivatives==True)</span></dt>
+<dd>derivative of thrust or thrust coefficient.  Same format as dP and dCP</dd>
+<dt>dQ or dCQ <span class="classifier-delimiter">:</span> <span class="classifier">dictionary of arrays (present only if derivatives==True)</span></dt>
+<dd>derivative of torque or torque coefficient.  Same format as dP and dCP</dd>
+</dl>
+<p>CP = P / (q * Uinf * A)
+CT = T / (q * A)
+CQ = Q / (q * A * R)
+The rotor radius R, may not actually be Rtip if precone and precurve are both nonzero
+<code class="docutils literal notranslate"><span class="pre">R</span> <span class="pre">=</span> <span class="pre">Rtip*cos(precone)</span> <span class="pre">+</span> <span class="pre">precurveTip*sin(precone)</span></code></p>
 </dd></dl>
 
 </div>
@@ -120,43 +86,44 @@ and dP_dr[i, j] = dP_i / dr_j</p>
           </div>
         </div>
       </div>
-      <div class="sphinxsidebar">
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
         <div class="sphinxsidebarwrapper">
-  <h3>This Page</h3>
-  <ul class="this-page-menu">
-    <li><a href="../_sources/generated/ccblade.CCBlade.evaluate.txt"
-           rel="nofollow">Show Source</a></li>
-  </ul>
-<div id="searchbox" style="display: none">
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../_sources/generated/ccblade.CCBlade.evaluate.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
   <h3>Quick search</h3>
+    <div class="searchformwrapper">
     <form class="search" action="../search.html" method="get">
       <input type="text" name="q" />
       <input type="submit" value="Go" />
       <input type="hidden" name="check_keywords" value="yes" />
       <input type="hidden" name="area" value="default" />
     </form>
-    <p class="searchtip" style="font-size: 90%">
-    Enter search terms or a module, class or function name.
-    </p>
+    </div>
 </div>
 <script type="text/javascript">$('#searchbox').show(0);</script>
         </div>
       </div>
       <div class="clearer"></div>
     </div>
-    <div class="related">
+    <div class="related" role="navigation" aria-label="related navigation">
       <h3>Navigation</h3>
       <ul>
         <li class="right" style="margin-right: 10px">
           <a href="../genindex.html" title="General Index"
              >index</a></li>
-        <li><a href="../index.html">CCBlade 1.1.0 documentation</a> &raquo;</li> 
+        <li class="nav-item nav-item-0"><a href="../index.html">CCBlade 1.1.0 documentation</a> &#187;</li> 
       </ul>
     </div>
-    <div class="footer">
-        &copy; Copyright 2013, NREL.
-      Last updated on Jan 10, 2014.
-      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.2b1.
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2013, NREL.
+      Last updated on Apr 08, 2019.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.7.6.
     </div>
   </body>
 </html>

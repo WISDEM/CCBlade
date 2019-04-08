@@ -1,0 +1,6 @@
+ccblade.CCBlade.evaluate
+========================
+
+.. currentmodule:: ccblade
+
+.. automethod:: CCBlade.evaluate
