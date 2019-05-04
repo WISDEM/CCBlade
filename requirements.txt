@@ -1,2 +1,2 @@
-https://github.com/WISDEM/AirfoilPreppy/tarball/master#egg=airfoilprep.py
+git+git://github.com/WISDEM/AirfoilPreppy.git@02b47dffac56dc0902769c6e084f640d91b7967e#egg=airfoilprep.py
 -e .

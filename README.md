@@ -42,8 +42,8 @@ Once both are installed, proceed with an Anaconda Prompt
 
 Once both are installed, proceed with an Anaconda Prompt
 ```prompt
-(Anaconda3)> conda create --name devenv python=3.6 scipy=0.18.1 zope.interface=4.4.2 m2w64-gcc-fortran=5.3.0
-(Anaconda3)> activate devenv
+(Anaconda3)> conda create --name ccblade-devenv python=3.6 scipy=0.18.1 zope.interface=4.4.2 m2w64-gcc-fortran=5.3.0
+(Anaconda3)> activate ccblade-devenv
 (devenv)> pip install -r requirements.txt
 (devenv)> ccblade
 ```
