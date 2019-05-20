@@ -1024,7 +1024,7 @@ class CCBlade(object):
 
                 T[i] += self.B * Tsub / nsec
                 Q[i] += self.B * Qsub / nsec
-                M[i] += self.B * Msub / nsec
+                M[i] += Msub / nsec
 
 
         
