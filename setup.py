@@ -16,10 +16,9 @@ setup(
     py_modules=['ccblade'],
     package_data={'ccblade': []},
     packages=['ccblade'],
-    install_requires=['airfoilprep.py>=0.1'],
+    install_requires=['airfoilprep>=0.1'],
     # test_suite='test.test_ccblade.py',
     license='Apache License, Version 2.0',
-    ext_modules=[Extension('_bem', ['src/ccblade/bem.f90'], extra_compile_args=['-O2'])],
-    #dependency_links=['https://github.com/WISDEM/AirfoilPreppy/tarball/master#egg=airfoilprep.py-0.1'],
+    ext_modules=[Extension('_bem', ['src/ccblade/bem.f90'], extra_compile_args=['-O2','-fPIC','-shared'], extra_link_args=['-shared'])],
     zip_safe=False
 )
