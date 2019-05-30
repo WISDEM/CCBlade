@@ -506,6 +506,7 @@ class CCBlade(object):
 
         self.inverse_analysis = False
         self.induction        = False
+        self.induction_inflow = False
 
     # residual
     def __runBEM(self, phi, r, chord, theta, af, Vx, Vy):
@@ -513,15 +514,19 @@ class CCBlade(object):
 
         a = 0.0
         ap = 0.0
+        
+        
+        
         for i in range(self.iterRe):
 
             alpha, W, Re = _bem.relativewind(phi, a, ap, Vx, Vy, self.pitch,
                                              chord, theta, self.rho, self.mu)
             cl, cd = af.evaluate(alpha, Re)
-
+            
             fzero, a, ap = _bem.inductionfactors(r, chord, self.Rhub, self.Rtip, phi,
                                                  cl, cd, self.B, Vx, Vy, **self.bemoptions)
 
+        
         return fzero, a, ap
 
     def __errorFunction(self, phi, r, chord, theta, af, Vx, Vy):
@@ -606,9 +611,9 @@ class CCBlade(object):
             a = 0.0
             ap = 0.0
                 
-        alpha, W, Re = _bem.relativewind(phi, a, ap, Vx, Vy, self.pitch,
+        alpha_rad, W, Re = _bem.relativewind(phi, a, ap, Vx, Vy, self.pitch,
                                          chord, theta, self.rho, self.mu)
-        cl, cd = af.evaluate(alpha, Re)
+        cl, cd = af.evaluate(alpha_rad, Re)
 
         cn = cl*cphi + cd*sphi  # these expressions should always contain drag
         ct = cl*sphi - cd*cphi
@@ -617,9 +622,10 @@ class CCBlade(object):
         Np = cn*q*chord
         Tp = ct*q*chord
 
-
+        alpha_deg = alpha_rad * 180. / np.pi
+        
         if not self.derivatives:
-            return a, ap, Np, Tp, 0.0, 0.0, 0.0
+            return a, ap, Np, Tp, alpha_deg, 0.0, 0.0, 0.0
 
 
         # derivative of residual function
@@ -639,13 +645,13 @@ class CCBlade(object):
 
         # alpha, W, Re (Tapenade)
 
-        alpha, dalpha_dx, W, dW_dx, Re, dRe_dx = _bem.relativewind_dv(phi, dx_dx[0, :],
+        alpha_rad, dalpha_dx, W, dW_dx, Re, dRe_dx = _bem.relativewind_dv(phi, dx_dx[0, :],
             a, da_dx, ap, dap_dx, Vx, dx_dx[3, :], Vy, dx_dx[4, :],
             self.pitch, dx_dx[8, :], chord, dx_dx[1, :], theta, dx_dx[2, :],
             self.rho, self.mu)
 
         # cl, cd (spline derivatives)
-        dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe = af.derivatives(alpha, Re)
+        dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe = af.derivatives(alpha_rad, Re)
 
         # chain rule
         dcl_dx = dcl_dalpha*dalpha_dx + dcl_dRe*dRe_dx
@@ -659,7 +665,9 @@ class CCBlade(object):
         dNp_dx = Np*(1.0/cn*dcn_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
         dTp_dx = Tp*(1.0/ct*dct_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
         
-        return a, ap, Np, Tp, dNp_dx, dTp_dx, dR_dx
+        alpha_deg = alpha_rad * 180. / np.pi
+        
+        return a, ap, Np, Tp, alpha_deg, dNp_dx, dTp_dx, dR_dx
 
 
 
@@ -744,6 +752,7 @@ class CCBlade(object):
         n  = len(self.r)
         a  = np.zeros(n)
         ap = np.zeros(n)
+        alpha = np.zeros(n)
         Np = np.zeros(n)
         Tp = np.zeros(n)
 
@@ -808,13 +817,14 @@ class CCBlade(object):
 
             # derivatives of residual
 
-            a[i], ap[i], Np[i], Tp[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
+            a[i], ap[i], Np[i], Tp[i], alpha[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
 
             if isnan(Np[i]):
-                a[i]  = 0.
-                ap[i] = 0.
-                Np[i] = 0.
-                Tp[i] = 0.
+                a[i]     = 0.
+                ap[i]    = 0.
+                Np[i]    = 0.
+                Tp[i]    = 0.
+                alpha[i] = 0.
                 # print('warning, BEM convergence error, setting Np[%d] = Tp[%d] = 0.' % (i,i))
 
             if self.derivatives:
@@ -848,6 +858,8 @@ class CCBlade(object):
         if not self.derivatives:
             if self.induction:
                 return a, ap, Np, Tp
+            elif self.induction_inflow:
+                return a, ap, alpha
             else:
                 return Np, Tp
 
@@ -1024,7 +1036,7 @@ class CCBlade(object):
 
                 T[i] += self.B * Tsub / nsec
                 Q[i] += self.B * Qsub / nsec
-                M[i] += self.B * Msub / nsec
+                M[i] += Msub / nsec
 
 
         
