@@ -625,7 +625,7 @@ class CCBlade(object):
         alpha_deg = alpha_rad * 180. / np.pi
         
         if not self.derivatives:
-            return a, ap, Np, Tp, alpha_deg, 0.0, 0.0, 0.0
+            return a, ap, Np, Tp, alpha_deg, cl, cd, 0.0, 0.0, 0.0
 
 
         # derivative of residual function
@@ -667,7 +667,7 @@ class CCBlade(object):
         
         alpha_deg = alpha_rad * 180. / np.pi
         
-        return a, ap, Np, Tp, alpha_deg, dNp_dx, dTp_dx, dR_dx
+        return a, ap, Np, Tp, alpha_deg, cl, cd, dNp_dx, dTp_dx, dR_dx
 
 
 
@@ -753,6 +753,8 @@ class CCBlade(object):
         a  = np.zeros(n)
         ap = np.zeros(n)
         alpha = np.zeros(n)
+        cl = np.zeros(n)
+        cd = np.zeros(n)
         Np = np.zeros(n)
         Tp = np.zeros(n)
 
@@ -817,7 +819,7 @@ class CCBlade(object):
 
             # derivatives of residual
 
-            a[i], ap[i], Np[i], Tp[i], alpha[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
+            a[i], ap[i], Np[i], Tp[i], alpha[i], cl[i], cd[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
 
             if isnan(Np[i]):
                 a[i]     = 0.
@@ -854,12 +856,11 @@ class CCBlade(object):
                 dTp_dVy[i] = DTp_Dx[3]
 
 
-
         if not self.derivatives:
             if self.induction:
                 return a, ap, Np, Tp
             elif self.induction_inflow:
-                return a, ap, alpha
+                return a, ap, alpha, cl, cd
             else:
                 return Np, Tp
 
