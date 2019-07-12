@@ -315,7 +315,8 @@ class CCBladeLoads(Component):
         # distributed loads
         Np, Tp, self.dNp, self.dTp \
             = self.ccblade.distributedAeroLoads(self.V_load, self.Omega_load, self.pitch_load, self.azimuth_load)
-
+        
+        
         # concatenate loads at root/tip
         unknowns['loads_r'] = self.r
 

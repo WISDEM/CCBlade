@@ -284,7 +284,8 @@ class CCAirfoil(object):
 
         # Cn1
         idx_alpha0  = np.argmin(abs(alpha-unsteady['alpha0']))
-        if max(np.abs(np.gradient(cm)))>0.:
+        
+        if max(np.abs(np.gradient(cm)))>1.e-10:
             aoa_h = alpha[idx_alpha0]+35.
             idx_high = np.argmin(abs(alpha-aoa_h))
 
@@ -292,14 +293,17 @@ class CCAirfoil(object):
             idx_cm_min = [i for i,local_min in enumerate(np.r_[True, cm_temp[1:] < cm_temp[:-1]] & np.r_[cm_temp[:-1] < cm_temp[1:], True]) if local_min] + idx_low
             idx_high = idx_cm_min[-1]
             
+            
             idx_Cn1 = find_breakpoint(alpha, cm, idx_alpha0, idx_high)
             unsteady['Cn1'] = cn[idx_Cn1]
         else:
             idx_Cn1 = np.argmin(abs(alpha-0.))
             unsteady['Cn1'] = 0.
+        
 
+        
         # Cn2
-        if max(np.abs(np.gradient(cm)))>0.:
+        if max(np.abs(np.gradient(cm)))>1.e-10:
             aoa_l = np.mean([alpha[idx_alpha0], alpha[idx_Cn1]])-30.
             idx_low  = np.argmin(abs(alpha-aoa_l))
 
@@ -314,7 +318,7 @@ class CCAirfoil(object):
             unsteady['Cn2'] = 0.
 
         # C_nalpha
-        if max(np.abs(np.gradient(cm)))>0.:
+        if max(np.abs(np.gradient(cm)))>1.e-10:
             # unsteady['C_nalpha'] = np.gradient(cn, alpha_rad)[idx_alpha0]
             unsteady['C_nalpha'] = max(np.gradient(cn[idx_alpha0:idx_Cn1], alpha_rad[idx_alpha0:idx_Cn1]))
 
@@ -324,7 +328,7 @@ class CCAirfoil(object):
         # alpha1, alpha2
         # finding the break point in drag as a proxy for Trailing Edge separation, f=0.7
         # 3d stall corrections cause erroneous f calculations 
-        if max(np.abs(np.gradient(cm)))>0.:
+        if max(np.abs(np.gradient(cm)))>1.0e-10:
             aoa_l = [0.]
             idx_low  = np.argmin(abs(alpha-aoa_l))
             idx_alpha1 = find_breakpoint(alpha, cd, idx_low, idx_Cn1, multi=-1.)
