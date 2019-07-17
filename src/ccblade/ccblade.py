@@ -458,11 +458,11 @@ class CCAirfoil(object):
         # Set initial parameters needed in xfoil      
         LoadFlnmAF = self.AFName + ".txt" # This is a temporary file that will be deleted after it is no longer needed
         self.ctrl=float(self.AFName.rsplit('_',1)[-1]) # Used to get flap deflection angle...somewhat of a hack but the control value is needed for this instance so that it can be put into AeroDyn polar file
-        numNodes   = "280" # number of panels to use
-        dist_param = "0.45" # TE/LE panel density ratio
-        IterLimit = "500" # Maximum number of iterations to try and get to convergence
-        panelBunch = "2.5" # Panel bunching parameter to bunch near larger changes in profile gradients
-        rBunch = "0.85" # Region to LE bunching parameter (used to put additional panels near flap hinge)
+        numNodes   = 280 # number of panels to use
+        dist_param = 0.45 # TE/LE panel density ratio
+        IterLimit = 500 # Maximum number of iterations to try and get to convergence
+        panelBunch = 2.5 # Panel bunching parameter to bunch near larger changes in profile gradients
+        rBunch = 0.85 # Region to LE bunching parameter (used to put additional panels near flap hinge)
         XT1 = 0.6 # Defining left boundary of bunching region on top surface (should be before flap)
         XT2 = 0.8 # Defining right boundary of bunching region on top surface (should be after flap)
         XB1 = 0.6 # Defining left boundary of bunching region on bottom surface (should be before flap)
@@ -496,17 +496,17 @@ class CCAirfoil(object):
         # Re-panel with specified number of panes and LE/TE panel density ratio
         fid.write("PPAR\n")
         fid.write("N \n" )
-        fid.write(numNodes + "\n")
+        fid.write(str(numNodes) + "\n")
         fid.write("P \n") # set panel bunching parameter
-        fid.write(panelBunch + " \n")
+        fid.write(str(panelBunch) + " \n")
         fid.write("T \n") # set TE/LE panel density ratio
-        fid.write( dist_param + "\n")
+        fid.write( str(dist_param) + "\n")
         fid.write("R \n") # set region panel bunching ratio
-        fid.write(rBunch + " \n")
+        fid.write(str(rBunch) + " \n")
         fid.write("XT \n") # set region panel bunching bounds on top surface
-        fid.write(XT1 +" \n" + XT2 + " \n")
+        fid.write(str(XT1) +" \n" + str(XT2) + " \n")
         fid.write("XB \n") # set region panel bunching bounds on bottom surface
-        fid.write(XB1 +" \n" + XB2 + " \n")
+        fid.write(str(XB1) +" \n" + str(XB2) + " \n")
         fid.write("\n\n")
         
         # Set Simulation parameters (Re and max number of iterations)
@@ -515,7 +515,7 @@ class CCAirfoil(object):
         #fid.write( str(Re[0]) + "\n") # this sets Re to value specified as an input
         fid.write( "750000 \n") # bem: I was having trouble geting convergence for some of the thinner airfoils at the tip for the large Re specified in the yaml, so I am hard coding in Re=750,000 (which is the same generic Re used for the other airfoils begin used outside of xfoil)
         fid.write("ITER \n")
-        fid.write( IterLimit + "\n")
+        fid.write( str(IterLimit) + "\n")
         
         # Run simulations for range of AoA
         fid.write("ASEQ 0 " + str(AoA_min) + " -0.5 \n") # The preliminary runs are just to get an initialize airfoil solution at min AoA so that the actual runs will not become unstable
