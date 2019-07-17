@@ -3,8 +3,9 @@
 
 from setuptools import setup
 from numpy.distutils.core import setup, Extension
+import os
 
-
+os.environ['NPY_DISTUTILS_APPEND_FLAGS'] = '1'
 
 setup(
     name='CCBlade',
@@ -19,6 +20,6 @@ setup(
     install_requires=['airfoilprep>=0.1'],
     # test_suite='test.test_ccblade.py',
     license='Apache License, Version 2.0',
-    ext_modules=[Extension('_bem', ['src/ccblade/bem.f90'], extra_compile_args=['-O2','-fPIC','-shared'], extra_link_args=['-shared'])],
+    ext_modules=[Extension('_bem', ['src/ccblade/bem.f90'], extra_compile_args=['-O2','-fPIC'])],
     zip_safe=False
 )
