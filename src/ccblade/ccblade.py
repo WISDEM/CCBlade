@@ -368,8 +368,8 @@ class CCAirfoil(object):
         unsteady['Cd']    = cd
         unsteady['Cm']    = cm
 
-        unsteady['Re'] = 0.75 #bem: this was the default value before I changed anything
-        unsteady['Ctrl'] = 0. #ben: This value is by default
+        unsteady['Re'] = 0.75 #bem: this was the default value before I changed anything but it does not agree with value from yaml file
+        unsteady['Ctrl'] = 0. #bem: This value is by default
 
         self.unsteady = unsteady
 
