@@ -616,7 +616,7 @@ class CCBlade(object):
             ap = 0.0
                 
         alpha_rad, W, Re = _bem.relativewind(phi, a, ap, Vx, Vy, self.pitch,
-                                         chord, theta, self.rho, self.mu)
+                                             chord, theta, self.rho, self.mu)
         cl, cd = af.evaluate(alpha_rad, Re)
 
         cn = cl*cphi + cd*sphi  # these expressions should always contain drag
@@ -627,53 +627,54 @@ class CCBlade(object):
         Tp = ct*q*chord
 
         alpha_deg = alpha_rad * 180. / np.pi
-        
-        if not self.derivatives:
-            return a, ap, Np, Tp, alpha_deg, cl, cd, 0.0, 0.0, 0.0
 
+        if self.derivatives:
 
-        # derivative of residual function
-        if rotating:
-            dR_dx, da_dx, dap_dx = self.__residualDerivatives(phi, r, chord, theta, af, Vx, Vy)
-            dphi_dx = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            # derivative of residual function
+            if rotating:
+                dR_dx, da_dx, dap_dx = self.__residualDerivatives(phi, r, chord, theta, af, Vx, Vy)
+                dphi_dx = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            else:
+                dR_dx = np.zeros(9)
+                dR_dx[0] = 1.0  # just to prevent divide by zero
+                da_dx = np.zeros(9)
+                dap_dx = np.zeros(9)
+                dphi_dx = np.zeros(9)
+
+            # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip, pitch]  (derivative order)
+            dx_dx = np.eye(9)
+            dchord_dx = np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+            # alpha, W, Re (Tapenade)
+
+            alpha_rad, dalpha_dx, W, dW_dx, Re, dRe_dx = _bem.relativewind_dv(phi, dx_dx[0, :],
+                a, da_dx, ap, dap_dx, Vx, dx_dx[3, :], Vy, dx_dx[4, :],
+                self.pitch, dx_dx[8, :], chord, dx_dx[1, :], theta, dx_dx[2, :],
+                self.rho, self.mu)
+
+            # cl, cd (spline derivatives)
+            dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe = af.derivatives(alpha_rad, Re)
+
+            # chain rule
+            dcl_dx = dcl_dalpha*dalpha_dx + dcl_dRe*dRe_dx
+            dcd_dx = dcd_dalpha*dalpha_dx + dcd_dRe*dRe_dx
+
+            # cn, cd
+            dcn_dx = dcl_dx*cphi - cl*sphi*dphi_dx + dcd_dx*sphi + cd*cphi*dphi_dx
+            dct_dx = dcl_dx*sphi + cl*cphi*dphi_dx - dcd_dx*cphi + cd*sphi*dphi_dx
+
+            # Np, Tp
+            dNp_dx = Np*(1.0/cn*dcn_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
+            dTp_dx = Tp*(1.0/ct*dct_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
+
+            alpha_deg = alpha_rad * 180. / np.pi
+
         else:
-            dR_dx = np.zeros(9)
-            dR_dx[0] = 1.0  # just to prevent divide by zero
-            da_dx = np.zeros(9)
-            dap_dx = np.zeros(9)
-            dphi_dx = np.zeros(9)
+            dNp_dx = None
+            dTp_dx = None
+            dR_dx = None
 
-        # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip, pitch]  (derivative order)
-        dx_dx = np.eye(9)
-        dchord_dx = np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-
-        # alpha, W, Re (Tapenade)
-
-        alpha_rad, dalpha_dx, W, dW_dx, Re, dRe_dx = _bem.relativewind_dv(phi, dx_dx[0, :],
-            a, da_dx, ap, dap_dx, Vx, dx_dx[3, :], Vy, dx_dx[4, :],
-            self.pitch, dx_dx[8, :], chord, dx_dx[1, :], theta, dx_dx[2, :],
-            self.rho, self.mu)
-
-        # cl, cd (spline derivatives)
-        dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe = af.derivatives(alpha_rad, Re)
-
-        # chain rule
-        dcl_dx = dcl_dalpha*dalpha_dx + dcl_dRe*dRe_dx
-        dcd_dx = dcd_dalpha*dalpha_dx + dcd_dRe*dRe_dx
-
-        # cn, cd
-        dcn_dx = dcl_dx*cphi - cl*sphi*dphi_dx + dcd_dx*sphi + cd*cphi*dphi_dx
-        dct_dx = dcl_dx*sphi + cl*cphi*dphi_dx - dcd_dx*cphi + cd*sphi*dphi_dx
-
-        # Np, Tp
-        dNp_dx = Np*(1.0/cn*dcn_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
-        dTp_dx = Tp*(1.0/ct*dct_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
-        
-        alpha_deg = alpha_rad * 180. / np.pi
-        
-        return a, ap, Np, Tp, alpha_deg, cl, cd, dNp_dx, dTp_dx, dR_dx
-
-
+        return a, ap, Np, Tp, alpha_deg, cl, cd, cn, ct, q, W, Re, dNp_dx, dTp_dx, dR_dx
 
 
     def __windComponents(self, Uinf, Omega, azimuth):
@@ -761,6 +762,11 @@ class CCBlade(object):
         cd = np.zeros(n)
         Np = np.zeros(n)
         Tp = np.zeros(n)
+        cn = np.zeros(n)
+        ct = np.zeros(n)
+        q = np.zeros(n)
+        Re = np.zeros(n)
+        W = np.zeros(n)
 
         dNp_dVx = np.zeros(n)
         dTp_dVx = np.zeros(n)
@@ -823,7 +829,8 @@ class CCBlade(object):
 
             # derivatives of residual
 
-            a[i], ap[i], Np[i], Tp[i], alpha[i], cl[i], cd[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
+            a[i], ap[i], Np[i], Tp[i], alpha[i], cl[i], cd[i], cn[i], ct[i], q[i], W[i], Re[i],\
+                dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
 
             if isnan(Np[i]):
                 a[i]     = 0.
@@ -861,12 +868,7 @@ class CCBlade(object):
 
 
         if not self.derivatives:
-            if self.induction:
-                return a, ap, Np, Tp
-            elif self.induction_inflow:
-                return a, ap, alpha, cl, cd
-            else:
-                return Np, Tp
+            derivs = {}
 
         else:
 
@@ -939,7 +941,14 @@ class CCBlade(object):
             dNp['dpitch'] = dNp_dX[13, :].reshape(n, 1)
             dTp['dpitch'] = dTp_dX[13, :].reshape(n, 1)
 
-            return Np, Tp, dNp, dTp
+            derivs['dNp'] = dNp
+            derivs['dTp']  = dTp
+
+        loads = {'a': a, 'ap': ap, 'Np': Np, 'Tp': Tp,
+                 'alpha': alpha, 'Cl': cl, 'Cd': cd, 'Cn': cn, 'Ct': ct,
+                 'W': W, 'Re': Re}
+
+        return loads, derivs
 
 
 
@@ -1016,17 +1025,17 @@ class CCBlade(object):
 
                 if not self.derivatives:
                     # contribution from this azimuthal location
-                    if self.induction:
-                        a, ap, Np, Tp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
-                        # Induction
-                        self.a  = a
-                        self.ap = ap
-                    else:
-                        Np, Tp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+
+                    loads, derivs = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                    Np, Tp = (loads['Np'], loads['Tp'])
 
                 else:
 
-                    Np, Tp, dNp, dTp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                    loads, derivs = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                    Np = loads['Np']
+                    Tp = loads['Tp']
+                    dNp = derivs['dNp']
+                    dTp = derivs['dTp']
 
                     dT_ds_sub, dQ_ds_sub, dT_dv_sub, dQ_dv_sub = self.__thrustTorqueDeriv(
                         Np, Tp, self._dNp_dX, self._dTp_dX, self._dNp_dprecurve, self._dTp_dprecurve, *args)
