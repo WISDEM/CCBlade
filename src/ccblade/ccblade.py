@@ -866,12 +866,8 @@ class CCBlade(object):
                 dNp_dVy[i] = DNp_Dx[3]
                 dTp_dVy[i] = DTp_Dx[3]
 
-
-        if not self.derivatives:
-            derivs = {}
-
-        else:
-
+        derivs = {}
+        if self.derivatives:
             # chain rule
             dNp_dw = dNp_dVx*dVx_dw + dNp_dVy*dVy_dw
             dTp_dw = dTp_dVx*dVx_dw + dTp_dVy*dVy_dw
@@ -942,7 +938,7 @@ class CCBlade(object):
             dTp['dpitch'] = dTp_dX[13, :].reshape(n, 1)
 
             derivs['dNp'] = dNp
-            derivs['dTp']  = dTp
+            derivs['dTp'] = dTp
 
         loads = {'a': a, 'ap': ap, 'Np': Np, 'Tp': Tp,
                  'alpha': alpha, 'Cl': cl, 'Cd': cd, 'Cn': cn, 'Ct': ct,
@@ -1113,18 +1109,30 @@ class CCBlade(object):
             # pack derivatives into dictionary
             dT, dQ, dP = self.__thrustTorqueDictionary(dT_ds, dQ_ds, dP_ds, dT_dv, dQ_dv, dP_dv, npts)
         
-        
-        if coefficients:
-            if self.derivatives:
-                return P, T, Q, M, dP, dT, dQ, CP, CT, CQ, CM, dCP, dCT, dCQ
-            else:
-                return P, T, Q, M, CP, CT, CQ, CM
-        else:
-            if self.derivatives:
-                return P, T, Q, M, dP, dT, dQ
-            else:
-                return P, T, Q, M
 
+
+        outputs = {}
+        derivs = {}
+        if coefficients:
+            outputs['CP'] = CP
+            outputs['CT'] = CT
+            outputs['CQ'] = CQ
+            outputs['CM'] = CM
+            if self.derivatives:
+                derivs['dCP'] = dCP
+                derivs['dCT'] = dCT
+                derivs['dCQ'] = dCQ
+        else:
+            outputs['P'] = P
+            outputs['T'] = T
+            outputs['Q'] = Q
+            outputs['M'] = M
+            if self.derivatives:
+                derivs['dP'] = dP
+                derivs['dT'] = dT
+                derivs['dQ'] = dQ
+
+        return outputs, derivs
 
 
 
