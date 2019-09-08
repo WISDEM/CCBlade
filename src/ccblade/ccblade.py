@@ -1334,7 +1334,9 @@ if __name__ == '__main__':
     azimuth = 90
 
     # evaluate distributed loads
-    Np, Tp = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+    loads, derivs = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+    Np = loads['Np']
+    Tp = loads['Tp']
 
     # plot
     import matplotlib.pyplot as plt
@@ -1345,7 +1347,10 @@ if __name__ == '__main__':
     plt.ylabel('distributed aerodynamic loads (kN)')
     plt.legend(loc='upper left')
 
-    CP, CT, CQ = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=True)
+    outputs, _ = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficients=True)
+    CP = outputs['CP']
+    CT = outputs['CT']
+    CQ = outputs['CQ']
 
     print(CP, CT, CQ)
 
@@ -1355,7 +1360,10 @@ if __name__ == '__main__':
     Uinf = Omega*pi/30.0 * Rtip/tsr
     pitch = np.zeros_like(tsr)
 
-    CP, CT, CQ = aeroanalysis.evaluate(Uinf, Omega, pitch, coefficient=True)
+    outputs, _ = aeroanalysis.evaluate(Uinf, Omega, pitch, coefficients=True)
+    CP = outputs['CP']
+    CT = outputs['CT']
+    CQ = outputs['CQ']
 
     plt.figure()
     plt.plot(tsr, CP, 'k')
