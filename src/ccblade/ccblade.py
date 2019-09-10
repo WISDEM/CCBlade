@@ -93,10 +93,12 @@ class CCAirfoil(object):
     @classmethod
     def initFromAerodynFile(cls, aerodynFile):
         """convenience method for initializing with AeroDyn formatted files
+
         Parameters
         ----------
         aerodynFile : str
             location of AeroDyn style airfoiil file
+
         Returns
         -------
         af : CCAirfoil
@@ -180,18 +182,21 @@ class CCAirfoil(object):
 
     def evaluate(self, alpha, Re, return_cm=False):
         """Get lift/drag coefficient at the specified angle of attack and Reynolds number.
+
         Parameters
         ----------
         alpha : float (rad)
             angle of attack
         Re : float
             Reynolds number
+
         Returns
         -------
         cl : float
             lift coefficient
         cd : float
             drag coefficient
+
         Notes
         -----
         This method uses a spline so that the output is continuously differentiable, and
@@ -399,6 +404,7 @@ class CCBlade(object):
                  nSector=8, precurve=None, precurveTip=0.0, presweep=None, presweepTip=0.0,
                  tiploss=True, hubloss=True, wakerotation=True, usecd=True, iterRe=1, derivatives=False):
         """Constructor for aerodynamic rotor analysis
+
         Parameters
         ----------
         r : array_like (m)
@@ -715,6 +721,7 @@ class CCBlade(object):
 
     def distributedAeroLoads(self, Uinf, Omega, pitch, azimuth):
         """Compute distributed aerodynamic loads along blade.
+
         Parameters
         ----------
         Uinf : float or array_like (m/s)
@@ -728,22 +735,37 @@ class CCBlade(object):
             (positive decreases angle of attack)
         azimuth : float (deg)
             the :ref:`azimuth angle <hub_azimuth_coord>` where aerodynamic loads should be computed at
+
         Returns
         -------
-        Np : ndarray (N/m)
-            force per unit length normal to the section on downwind side
-        Tp : ndarray (N/m)
-            force per unit length tangential to the section in the direction of rotation
-        dNp : dictionary containing arrays (present if ``self.derivatives = True``)
-            derivatives of normal loads.  Each item in the dictionary a 2D Jacobian.
-            The array sizes and keys are (where n = number of stations along blade):
-            n x n (diagonal): 'dr', 'dchord', 'dtheta', 'dpresweep'
-            n x n (tridiagonal): 'dprecurve'
-            n x 1: 'dRhub', 'dRtip', 'dprecone', 'dtilt', 'dhubHt', 'dyaw', 'dazimuth', 'dUinf', 'dOmega', 'dpitch'
-            for example dNp_dr = dNp['dr']  (where dNp_dr is an n x n array)
-            and dNp_dr[i, j] = dNp_i / dr_j
-        dTp : dictionary (present if ``self.derivatives = True``)
-            derivatives of tangential loads.  Same keys as dNp.
+        loads : dict
+            Dictionary of distributed aerodynamic loads (and other useful quantities). Keys include:
+
+            - 'Np' : force per unit length normal to the section on downwind side (N/m)
+            - 'Tp' : force per unit length tangential to the section in the direction of rotation (N/m)
+            - 'a' : axial induction factor
+            - 'ap' : tangential induction factor
+            - 'alpha' : airfoil angle of attack (degrees)
+            - 'Cl' : lift coefficient
+            - 'Cd' : drag coefficient
+            - 'Cn' : normal force coefficient
+            - 'Ct' : tangential force coefficient
+            - 'W' : airfoil relative velocity (m/s)
+            - 'Re' : chord Reynolds number
+
+        derivs : dict
+            Dictionary of derivatives of distributed aerodynamic loads with respect to inputs. Keys include:
+
+            - dNp : dictionary containing arrays (present if ``self.derivatives = True``)
+                derivatives of normal loads.  Each item in the dictionary a 2D Jacobian.
+                The array sizes and keys are (where n = number of stations along blade):
+                n x n (diagonal): 'dr', 'dchord', 'dtheta', 'dpresweep'
+                n x n (tridiagonal): 'dprecurve'
+                n x 1: 'dRhub', 'dRtip', 'dprecone', 'dtilt', 'dhubHt', 'dyaw', 'dazimuth', 'dUinf', 'dOmega', 'dpitch'
+                for example dNp_dr = dNp['dr']  (where dNp_dr is an n x n array)
+                and dNp_dr[i, j] = dNp_i / dr_j
+            - dTp : dictionary (present if ``self.derivatives = True``)
+                derivatives of tangential loads.  Same keys as dNp.
         """
 
         self.pitch = radians(pitch)
@@ -940,8 +962,10 @@ class CCBlade(object):
             derivs['dNp'] = dNp
             derivs['dTp'] = dTp
 
-        loads = {'a': a, 'ap': ap, 'Np': Np, 'Tp': Tp,
-                 'alpha': alpha, 'Cl': cl, 'Cd': cd, 'Cn': cn, 'Ct': ct,
+        loads = {'Np': Np, 'Tp': Tp,
+                 'a': a, 'ap': ap,
+                 'alpha': alpha,
+                 'Cl': cl, 'Cd': cd, 'Cn': cn, 'Ct': ct,
                  'W': W, 'Re': Re}
 
         return loads, derivs
@@ -951,6 +975,7 @@ class CCBlade(object):
 
     def evaluate(self, Uinf, Omega, pitch, coefficients=False):
         """Run the aerodynamic analysis at the specified conditions.
+
         Parameters
         ----------
         Uinf : array_like (m/s)
@@ -959,30 +984,35 @@ class CCBlade(object):
             rotor rotation speed
         pitch : array_like (deg)
             blade pitch setting
-        coefficient : bool, optional
+        coefficients : bool, optional
             if True, results are returned in nondimensional form
+
         Returns
         -------
-        P or CP : ndarray (W)
-            power or power coefficient
-        T or CT : ndarray (N)
-            thrust or thrust coefficient (magnitude)
-        Q or CQ : ndarray (N*m)
-            torque or torque coefficient (magnitude)
-        dP or dCP : dictionary of arrays (present only if derivatives==True)
-            derivatives of power or power coefficient.  Each item in dictionary is a Jacobian.
-            The array sizes and keys are below
-            npts is the number of conditions (len(Uinf)),
-            n = number of stations along blade (len(r))
-            npts x 1: 'dprecone', 'dtilt', 'dhubHt', 'dRhub', 'dRtip', 'dprecurveTip', 'dpresweepTip', 'dyaw'
-            npts x npts: 'dUinf', 'dOmega', 'dpitch'
-            npts x n: 'dr', 'dchord', 'dtheta', 'dprecurve', 'dpresweep'
-            for example dP_dr = dP['dr']  (where dP_dr is an npts x n array)
-            and dP_dr[i, j] = dP_i / dr_j
-        dT or dCT : dictionary of arrays (present only if derivatives==True)
-            derivative of thrust or thrust coefficient.  Same format as dP and dCP
-        dQ or dCQ : dictionary of arrays (present only if derivatives==True)
-            derivative of torque or torque coefficient.  Same format as dP and dCP
+        outputs : dict
+            Dictionary of integrated rotor quantities with the following keys:
+
+            - 'P' (W) or 'CP' : Rotor power or coefficient of
+            - 'T' (N) or 'CT' : Rotor thrust or coefficient of
+            - 'Q' (N*m) or 'CQ' : Rotor torque or coefficient of
+        derivs: dict
+            Dictionary of partial derivatives of rotor quantities with the following keys:
+
+            - dP or dCP : dictionary of arrays (present only if derivatives==True)
+                derivatives of power or power coefficient.  Each item in dictionary is a Jacobian.
+                The array sizes and keys are below
+                npts is the number of conditions (len(Uinf)),
+                n = number of stations along blade (len(r))
+                npts x 1: 'dprecone', 'dtilt', 'dhubHt', 'dRhub', 'dRtip', 'dprecurveTip', 'dpresweepTip', 'dyaw'
+                npts x npts: 'dUinf', 'dOmega', 'dpitch'
+                npts x n: 'dr', 'dchord', 'dtheta', 'dprecurve', 'dpresweep'
+                for example dP_dr = dP['dr']  (where dP_dr is an npts x n array)
+                and dP_dr[i, j] = dP_i / dr_j
+            - dT or dCT : dictionary of arrays (present only if derivatives==True)
+                derivative of thrust or thrust coefficient.  Same format as dP and dCP
+            - dQ or dCQ : dictionary of arrays (present only if derivatives==True)
+                derivative of torque or torque coefficient.  Same format as dP and dCP
+
         Notes
         -----
         CP = P / (q * Uinf * A)
