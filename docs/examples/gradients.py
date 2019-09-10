@@ -94,8 +94,11 @@ azimuth = 0.0
 
 # 5 ----------
 
-Np, Tp, dNp, dTp \
-    = rotor.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+loads, derivs = rotor.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+Np = loads['Np']
+Tp = loads['Tp']
+dNp = derivs['dNp']
+dTp = derivs['dTp']
 
 n = len(r)
 
@@ -126,8 +129,13 @@ dNp_dpitch = dNp['dpitch']
 # 6 ----------
 
 
-P, T, Q, dP, dT, dQ \
-    = rotor.evaluate([Uinf], [Omega], [pitch])
+outputs, derivs = rotor.evaluate([Uinf], [Omega], [pitch])
+P = outputs['P']
+T = outputs['T']
+Q = outputs['Q']
+dP = derivs['dP']
+dT = derivs['dT']
+dQ = derivs['dQ']
 
 npts = len(P)
 
@@ -169,7 +177,9 @@ rotor_fd = CCBlade(r, chord, theta, af, Rhub, Rtip, B, rho, mu,
 
 r[idx] -= delta
 
-Npd, Tpd = rotor_fd.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+loads, derivs = rotor_fd.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+Npd = loads['Np']
+Tpd = loads['Tp']
 
 dNp_dr_fd = (Npd - Np) / delta
 dTp_dr_fd = (Tpd - Tp) / delta
@@ -190,7 +200,10 @@ rotor_fd = CCBlade(r, chord, theta, af, Rhub, Rtip,
 
 precone -= delta
 
-Pd, Td, Qd = rotor_fd.evaluate([Uinf], [Omega], [pitch], coefficient=False)
+outputs, derivs = rotor_fd.evaluate([Uinf], [Omega], [pitch], coefficient=False)
+Pd = outputs['P']
+Td = outputs['T']
+Qd = outputs['Q']
 
 dT_dprecone_fd = (Td - T) / delta
 dQ_dprecone_fd = (Qd - Q) / delta
@@ -213,7 +226,10 @@ rotor_fd = CCBlade(r, chord, theta, af, Rhub, Rtip,
 
 r[idx] -= delta
 
-Pd, Td, Qd = rotor_fd.evaluate([Uinf], [Omega], [pitch], coefficient=False)
+outputs, derivs = rotor_fd.evaluate([Uinf], [Omega], [pitch], coefficient=False)
+Pd = outputs['P']
+Td = outputs['T']
+Qd = outputs['Q']
 
 dT_dr_fd = (Td - T) / delta
 dQ_dr_fd = (Qd - Q) / delta
