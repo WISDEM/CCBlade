@@ -42,7 +42,7 @@ class CCAirfoil(object):
     differentiable cubic spline"""
 
 
-    def __init__(self, alpha, Re, cl, cd, cm=[]):
+    def __init__(self, alpha, Re, cl, cd, cm=[], x=[], y=[], AFName='DEFAULTAF'):
         """Setup CCAirfoil from raw airfoil data on a grid.
         Parameters
         ----------
@@ -61,6 +61,9 @@ class CCAirfoil(object):
         """
 
         alpha = np.radians(alpha)
+        self.x = x
+        self.y = y
+        self.AFName=AFName
         self.one_Re = False
 
         if len(cm) > 0:
@@ -226,8 +229,12 @@ class CCAirfoil(object):
             dcl_dRe = 0.0
             dcd_dRe = 0.0
         else:
-            dcl_dRe = bisplev(alpha, Re, tck_cl, dx=0, dy=1)
-            dcd_dRe = bisplev(alpha, Re, tck_cd, dx=0, dy=1)
+            try:
+                dcl_dRe = bisplev(alpha, Re, tck_cl, dx=0, dy=1)
+                dcd_dRe = bisplev(alpha, Re, tck_cd, dx=0, dy=1)
+            except:
+                dcl_dRe = 0.0
+                dcd_dRe = 0.0
 
         return dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe
 
@@ -361,37 +368,6 @@ class CCAirfoil(object):
 
         self.unsteady = unsteady
 
-        # import matplotlib.pyplot as plt
-        # fig, ax = plt.subplots(nrows=3, ncols=1, figsize=(6., 8.), sharex=True)
-        # ax[0].plot(alpha, cn)
-        # ax[0].plot(alpha, cl, '--')
-        # ax[0].plot(unsteady['alpha0'], 0.,'o')
-        # ax[0].annotate('alpha0', (unsteady['alpha0'], 0.))
-        # ax[0].plot(alpha[idx_alpha0], cn[idx_alpha0],'o')
-        # ax[0].annotate('C_nalpha', (alpha[idx_alpha0], cn[idx_alpha0]))
-        # ax[0].plot(alpha[idx_Cn1], cn[idx_Cn1],'o')
-        # ax[0].annotate('Cn1', (alpha[idx_Cn1], cn[idx_Cn1]))
-        # ax[0].plot(alpha[idx_Cn2], cn[idx_Cn2],'o')
-        # ax[0].annotate('Cn2', (alpha[idx_Cn2], cn[idx_Cn2]))
-        # ax[0].set_ylabel('C_L')
-        # ax[0].grid(True, linestyle=':')
-
-        # ax[1].plot(alpha, cd)
-        # ax[1].set_ylabel('C_D')
-        # ax[1].grid(True, linestyle=':')
-
-        # ax[2].plot(alpha, cm)
-        # ax[2].plot(alpha[idx_Cn1], cm[idx_Cn1], 'o')
-        # ax[2].annotate('Cn1', (alpha[idx_Cn1], cm[idx_Cn1]))
-        # ax[2].plot(alpha[idx_Cn2], cm[idx_Cn2], 'o')
-        # ax[2].annotate('Cn2', (alpha[idx_Cn2], cm[idx_Cn2]))
-
-        # ax[2].set_ylabel('C_M')
-        # ax[2].set_xlabel('Angle of Attack, deg')
-        # ax[2].grid(True, linestyle=':')
-
-        # plt.show()
-
 # ------------------
 #  Main Class: CCBlade
 # ------------------
@@ -501,8 +477,8 @@ class CCBlade(object):
         self.presweepTip = presweepTip
 
         # rotor radius
-        if self.precurveTip != 0 and self.precone != 0.0:
-            warnings.warn('rotor diameter may be modified in unexpected ways if tip precurve and precone are both nonzero')
+        #if self.precurveTip != 0 and self.precone != 0.0:
+        #    warnings.warn('rotor diameter may be modified in unexpected ways if tip precurve and precone are both nonzero')
 
         self.rotorR = Rtip*cos(self.precone) + self.precurveTip*sin(self.precone)
 
@@ -524,8 +500,6 @@ class CCBlade(object):
 
         a = 0.0
         ap = 0.0
-        
-        
         
         for i in range(self.iterRe):
 
@@ -774,7 +748,6 @@ class CCBlade(object):
         # component of velocity at each radial station
         Vx, Vy, dVx_dw, dVy_dw, dVx_dcurve, dVy_dcurve = self.__windComponents(Uinf, Omega, azimuth)
 
-
         # initialize
         n  = len(self.r)
         a  = np.zeros(n)
@@ -888,8 +861,10 @@ class CCBlade(object):
                 dNp_dVy[i] = DNp_Dx[3]
                 dTp_dVy[i] = DTp_Dx[3]
 
+
         derivs = {}
         if self.derivatives:
+            
             # chain rule
             dNp_dw = dNp_dVx*dVx_dw + dNp_dVy*dVy_dw
             dTp_dw = dTp_dVx*dVx_dw + dTp_dVy*dVy_dw
@@ -1049,17 +1024,11 @@ class CCBlade(object):
             for j in range(nsec):  # integrate across azimuth
                 azimuth = 360.0*float(j)/nsec
 
-                if not self.derivatives:
-                    # contribution from this azimuthal location
-
-                    loads, derivs = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
-                    Np, Tp = (loads['Np'], loads['Tp'])
-
-                else:
-
-                    loads, derivs = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
-                    Np = loads['Np']
-                    Tp = loads['Tp']
+                # contribution from this azimuthal location
+                loads, derivs = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                Np, Tp = (loads['Np'], loads['Tp'])
+                
+                if self.derivatives:
                     dNp = derivs['dNp']
                     dTp = derivs['dTp']
 
@@ -1077,14 +1046,10 @@ class CCBlade(object):
                 T[i] += self.B * Tsub / nsec
                 Q[i] += self.B * Qsub / nsec
                 M[i] += Msub / nsec
-
-
         
         
         # Power
         P = Q * Omega*pi/30.0  # RPM to rad/s
-        
-        
         
         # normalize if necessary
         if coefficients:
@@ -1126,8 +1091,6 @@ class CCBlade(object):
                 dCT, dCQ, dCP = self.__thrustTorqueDictionary(dCT_ds, dCQ_ds, dCP_ds, dCT_dv, dCQ_dv, dCP_dv, npts)
 
 
-
-
         if self.derivatives:
             # scalars = [precone, tilt, hubHt, Rhub, Rtip, precurvetip, presweeptip, yaw, Uinf, Omega, pitch]
             # vectors = [r, chord, theta, precurve, presweep]
@@ -1139,7 +1102,6 @@ class CCBlade(object):
             # pack derivatives into dictionary
             dT, dQ, dP = self.__thrustTorqueDictionary(dT_ds, dQ_ds, dP_ds, dT_dv, dQ_dv, dP_dv, npts)
         
-
 
         outputs = {}
         derivs = {}
@@ -1164,7 +1126,7 @@ class CCBlade(object):
 
         return outputs, derivs
 
-
+    
 
     def __thrustTorqueDeriv(self, Np, Tp, dNp_dX, dTp_dX, dNp_dprecurve, dTp_dprecurve,
             r, precurve, presweep, precone, Rhub, Rtip, precurveTip, presweepTip):

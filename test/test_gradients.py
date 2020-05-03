@@ -2553,16 +2553,12 @@ class TestGradientsFreestreamArray(unittest.TestCase):
         np.testing.assert_allclose(dCP_dpitch_fd, dCP_dpitch, rtol=5e-5, atol=1e-8)
 
 
+def suite():
+    suite = unittest.TestSuite()
+    suite.addTest(unittest.makeSuite(TestGradients))
+    suite.addTest(unittest.makeSuite(TestGradientsNotRotating))
+    suite.addTest(unittest.makeSuite(TestGradientsFreestreamArray))
+    return suite
+
 if __name__ == '__main__':
-    unittest.main()
-
-    # from unittest import TestSuite
-
-    # blah = TestSuite()
-    # blah.addTest(TestGradientsFreestreamArray('test_dUinf3'))
-    # # # blah.addTest(TestGradients('test_dRhub2'))
-    # # # blah.addTest(TestGradients('test_dRhub3'))
-    # # # blah.addTest(TestGradientsFreestreamArray('test_dtheta1'))
-    # # # blah.addTest(TestGradients('test_dpitch3'))
-
-    # unittest.TextTestRunner().run(blah)
+    unittest.TextTestRunner().run(suite())
