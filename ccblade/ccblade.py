@@ -1105,6 +1105,16 @@ class CCBlade(object):
 
         outputs = {}
         derivs = {}
+        
+        outputs['P'] = P
+        outputs['T'] = T
+        outputs['Q'] = Q
+        outputs['M'] = M
+        if self.derivatives:
+            derivs['dP'] = dP
+            derivs['dT'] = dT
+            derivs['dQ'] = dQ
+            
         if coefficients:
             outputs['CP'] = CP
             outputs['CT'] = CT
@@ -1114,15 +1124,6 @@ class CCBlade(object):
                 derivs['dCP'] = dCP
                 derivs['dCT'] = dCT
                 derivs['dCQ'] = dCQ
-        else:
-            outputs['P'] = P
-            outputs['T'] = T
-            outputs['Q'] = Q
-            outputs['M'] = M
-            if self.derivatives:
-                derivs['dP'] = dP
-                derivs['dT'] = dT
-                derivs['dQ'] = dQ
 
         return outputs, derivs
 
