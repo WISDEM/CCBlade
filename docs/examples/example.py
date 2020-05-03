@@ -89,7 +89,9 @@ Omega = Uinf*tsr/Rtip * 30.0/pi  # convert to RPM
 azimuth = 0.0
 
 # evaluate distributed loads
-Np, Tp = rotor.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+loads, derivs = rotor.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+Np = loads['Np']
+Tp = loads['Tp']
 
 # 4 ----------
 
@@ -117,13 +119,19 @@ plt.show()
 
 # 6 ----------
 
-P, T, Q = rotor.evaluate([Uinf], [Omega], [pitch])
+outputs, derivs = rotor.evaluate([Uinf], [Omega], [pitch])
+P = outputs['P']
+T = outputs['T']
+Q = outputs['Q']
 
-CP, CT, CQ = rotor.evaluate([Uinf], [Omega], [pitch], coefficient=True)
+outputs, derivs = rotor.evaluate([Uinf], [Omega], [pitch], coefficient=True)
+CP = outputs['CP']
+CT = outputs['CT']
+CQ = outputs['CQ']
 
-print 'CP =', CP
-print 'CT =', CT
-print 'CQ =', CQ
+print('CP =', CP)
+print('CT =', CT)
+print('CQ =', CQ)
 
 # 6 ----------
 
@@ -135,7 +143,11 @@ Omega = 10.0 * np.ones_like(tsr)
 Uinf = Omega*pi/30.0 * Rtip/tsr
 pitch = np.zeros_like(tsr)
 
-CP, CT, CQ = rotor.evaluate(Uinf, Omega, pitch, coefficient=True)
+outputs, derivs = rotor.evaluate(Uinf, Omega, pitch, coefficient=True)
+CP = outputs['CP']
+CT = outputs['CT']
+CQ = outputs['CQ']
+
 
 plt.figure()
 plt.plot(tsr, CP)

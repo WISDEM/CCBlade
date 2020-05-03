@@ -93,10 +93,12 @@ class CCAirfoil(object):
     @classmethod
     def initFromAerodynFile(cls, aerodynFile):
         """convenience method for initializing with AeroDyn formatted files
+
         Parameters
         ----------
         aerodynFile : str
             location of AeroDyn style airfoiil file
+
         Returns
         -------
         af : CCAirfoil
@@ -180,18 +182,21 @@ class CCAirfoil(object):
 
     def evaluate(self, alpha, Re, return_cm=False):
         """Get lift/drag coefficient at the specified angle of attack and Reynolds number.
+
         Parameters
         ----------
         alpha : float (rad)
             angle of attack
         Re : float
             Reynolds number
+
         Returns
         -------
         cl : float
             lift coefficient
         cd : float
             drag coefficient
+
         Notes
         -----
         This method uses a spline so that the output is continuously differentiable, and
@@ -399,6 +404,7 @@ class CCBlade(object):
                  nSector=8, precurve=None, precurveTip=0.0, presweep=None, presweepTip=0.0,
                  tiploss=True, hubloss=True, wakerotation=True, usecd=True, iterRe=1, derivatives=False):
         """Constructor for aerodynamic rotor analysis
+
         Parameters
         ----------
         r : array_like (m)
@@ -616,7 +622,7 @@ class CCBlade(object):
             ap = 0.0
                 
         alpha_rad, W, Re = _bem.relativewind(phi, a, ap, Vx, Vy, self.pitch,
-                                         chord, theta, self.rho, self.mu)
+                                             chord, theta, self.rho, self.mu)
         cl, cd = af.evaluate(alpha_rad, Re)
 
         cn = cl*cphi + cd*sphi  # these expressions should always contain drag
@@ -627,53 +633,54 @@ class CCBlade(object):
         Tp = ct*q*chord
 
         alpha_deg = alpha_rad * 180. / np.pi
-        
-        if not self.derivatives:
-            return a, ap, Np, Tp, alpha_deg, cl, cd, 0.0, 0.0, 0.0
 
+        if self.derivatives:
 
-        # derivative of residual function
-        if rotating:
-            dR_dx, da_dx, dap_dx = self.__residualDerivatives(phi, r, chord, theta, af, Vx, Vy)
-            dphi_dx = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            # derivative of residual function
+            if rotating:
+                dR_dx, da_dx, dap_dx = self.__residualDerivatives(phi, r, chord, theta, af, Vx, Vy)
+                dphi_dx = np.array([1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+            else:
+                dR_dx = np.zeros(9)
+                dR_dx[0] = 1.0  # just to prevent divide by zero
+                da_dx = np.zeros(9)
+                dap_dx = np.zeros(9)
+                dphi_dx = np.zeros(9)
+
+            # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip, pitch]  (derivative order)
+            dx_dx = np.eye(9)
+            dchord_dx = np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
+
+            # alpha, W, Re (Tapenade)
+
+            alpha_rad, dalpha_dx, W, dW_dx, Re, dRe_dx = _bem.relativewind_dv(phi, dx_dx[0, :],
+                a, da_dx, ap, dap_dx, Vx, dx_dx[3, :], Vy, dx_dx[4, :],
+                self.pitch, dx_dx[8, :], chord, dx_dx[1, :], theta, dx_dx[2, :],
+                self.rho, self.mu)
+
+            # cl, cd (spline derivatives)
+            dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe = af.derivatives(alpha_rad, Re)
+
+            # chain rule
+            dcl_dx = dcl_dalpha*dalpha_dx + dcl_dRe*dRe_dx
+            dcd_dx = dcd_dalpha*dalpha_dx + dcd_dRe*dRe_dx
+
+            # cn, cd
+            dcn_dx = dcl_dx*cphi - cl*sphi*dphi_dx + dcd_dx*sphi + cd*cphi*dphi_dx
+            dct_dx = dcl_dx*sphi + cl*cphi*dphi_dx - dcd_dx*cphi + cd*sphi*dphi_dx
+
+            # Np, Tp
+            dNp_dx = Np*(1.0/cn*dcn_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
+            dTp_dx = Tp*(1.0/ct*dct_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
+
+            alpha_deg = alpha_rad * 180. / np.pi
+
         else:
-            dR_dx = np.zeros(9)
-            dR_dx[0] = 1.0  # just to prevent divide by zero
-            da_dx = np.zeros(9)
-            dap_dx = np.zeros(9)
-            dphi_dx = np.zeros(9)
+            dNp_dx = None
+            dTp_dx = None
+            dR_dx = None
 
-        # x = [phi, chord, theta, Vx, Vy, r, Rhub, Rtip, pitch]  (derivative order)
-        dx_dx = np.eye(9)
-        dchord_dx = np.array([0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0])
-
-        # alpha, W, Re (Tapenade)
-
-        alpha_rad, dalpha_dx, W, dW_dx, Re, dRe_dx = _bem.relativewind_dv(phi, dx_dx[0, :],
-            a, da_dx, ap, dap_dx, Vx, dx_dx[3, :], Vy, dx_dx[4, :],
-            self.pitch, dx_dx[8, :], chord, dx_dx[1, :], theta, dx_dx[2, :],
-            self.rho, self.mu)
-
-        # cl, cd (spline derivatives)
-        dcl_dalpha, dcl_dRe, dcd_dalpha, dcd_dRe = af.derivatives(alpha_rad, Re)
-
-        # chain rule
-        dcl_dx = dcl_dalpha*dalpha_dx + dcl_dRe*dRe_dx
-        dcd_dx = dcd_dalpha*dalpha_dx + dcd_dRe*dRe_dx
-
-        # cn, cd
-        dcn_dx = dcl_dx*cphi - cl*sphi*dphi_dx + dcd_dx*sphi + cd*cphi*dphi_dx
-        dct_dx = dcl_dx*sphi + cl*cphi*dphi_dx - dcd_dx*cphi + cd*sphi*dphi_dx
-
-        # Np, Tp
-        dNp_dx = Np*(1.0/cn*dcn_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
-        dTp_dx = Tp*(1.0/ct*dct_dx + 2.0/W*dW_dx + 1.0/chord*dchord_dx)
-        
-        alpha_deg = alpha_rad * 180. / np.pi
-        
-        return a, ap, Np, Tp, alpha_deg, cl, cd, dNp_dx, dTp_dx, dR_dx
-
-
+        return a, ap, Np, Tp, alpha_deg, cl, cd, cn, ct, q, W, Re, dNp_dx, dTp_dx, dR_dx
 
 
     def __windComponents(self, Uinf, Omega, azimuth):
@@ -714,6 +721,7 @@ class CCBlade(object):
 
     def distributedAeroLoads(self, Uinf, Omega, pitch, azimuth):
         """Compute distributed aerodynamic loads along blade.
+
         Parameters
         ----------
         Uinf : float or array_like (m/s)
@@ -727,22 +735,37 @@ class CCBlade(object):
             (positive decreases angle of attack)
         azimuth : float (deg)
             the :ref:`azimuth angle <hub_azimuth_coord>` where aerodynamic loads should be computed at
+
         Returns
         -------
-        Np : ndarray (N/m)
-            force per unit length normal to the section on downwind side
-        Tp : ndarray (N/m)
-            force per unit length tangential to the section in the direction of rotation
-        dNp : dictionary containing arrays (present if ``self.derivatives = True``)
-            derivatives of normal loads.  Each item in the dictionary a 2D Jacobian.
-            The array sizes and keys are (where n = number of stations along blade):
-            n x n (diagonal): 'dr', 'dchord', 'dtheta', 'dpresweep'
-            n x n (tridiagonal): 'dprecurve'
-            n x 1: 'dRhub', 'dRtip', 'dprecone', 'dtilt', 'dhubHt', 'dyaw', 'dazimuth', 'dUinf', 'dOmega', 'dpitch'
-            for example dNp_dr = dNp['dr']  (where dNp_dr is an n x n array)
-            and dNp_dr[i, j] = dNp_i / dr_j
-        dTp : dictionary (present if ``self.derivatives = True``)
-            derivatives of tangential loads.  Same keys as dNp.
+        loads : dict
+            Dictionary of distributed aerodynamic loads (and other useful quantities). Keys include:
+
+            - 'Np' : force per unit length normal to the section on downwind side (N/m)
+            - 'Tp' : force per unit length tangential to the section in the direction of rotation (N/m)
+            - 'a' : axial induction factor
+            - 'ap' : tangential induction factor
+            - 'alpha' : airfoil angle of attack (degrees)
+            - 'Cl' : lift coefficient
+            - 'Cd' : drag coefficient
+            - 'Cn' : normal force coefficient
+            - 'Ct' : tangential force coefficient
+            - 'W' : airfoil relative velocity (m/s)
+            - 'Re' : chord Reynolds number
+
+        derivs : dict
+            Dictionary of derivatives of distributed aerodynamic loads with respect to inputs. Keys include:
+
+            - dNp : dictionary containing arrays (present if ``self.derivatives = True``)
+                derivatives of normal loads.  Each item in the dictionary a 2D Jacobian.
+                The array sizes and keys are (where n = number of stations along blade):
+                n x n (diagonal): 'dr', 'dchord', 'dtheta', 'dpresweep'
+                n x n (tridiagonal): 'dprecurve'
+                n x 1: 'dRhub', 'dRtip', 'dprecone', 'dtilt', 'dhubHt', 'dyaw', 'dazimuth', 'dUinf', 'dOmega', 'dpitch'
+                for example dNp_dr = dNp['dr']  (where dNp_dr is an n x n array)
+                and dNp_dr[i, j] = dNp_i / dr_j
+            - dTp : dictionary (present if ``self.derivatives = True``)
+                derivatives of tangential loads.  Same keys as dNp.
         """
 
         self.pitch = radians(pitch)
@@ -761,6 +784,11 @@ class CCBlade(object):
         cd = np.zeros(n)
         Np = np.zeros(n)
         Tp = np.zeros(n)
+        cn = np.zeros(n)
+        ct = np.zeros(n)
+        q = np.zeros(n)
+        Re = np.zeros(n)
+        W = np.zeros(n)
 
         dNp_dVx = np.zeros(n)
         dTp_dVx = np.zeros(n)
@@ -823,7 +851,8 @@ class CCBlade(object):
 
             # derivatives of residual
 
-            a[i], ap[i], Np[i], Tp[i], alpha[i], cl[i], cd[i], dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
+            a[i], ap[i], Np[i], Tp[i], alpha[i], cl[i], cd[i], cn[i], ct[i], q[i], W[i], Re[i],\
+                dNp_dx, dTp_dx, dR_dx = self.__loads(phi_star, rotating, *args)
 
             if isnan(Np[i]):
                 a[i]     = 0.
@@ -859,17 +888,8 @@ class CCBlade(object):
                 dNp_dVy[i] = DNp_Dx[3]
                 dTp_dVy[i] = DTp_Dx[3]
 
-
-        if not self.derivatives:
-            if self.induction:
-                return a, ap, Np, Tp
-            elif self.induction_inflow:
-                return a, ap, alpha, cl, cd
-            else:
-                return Np, Tp
-
-        else:
-
+        derivs = {}
+        if self.derivatives:
             # chain rule
             dNp_dw = dNp_dVx*dVx_dw + dNp_dVy*dVy_dw
             dTp_dw = dTp_dVx*dVx_dw + dTp_dVy*dVy_dw
@@ -939,13 +959,23 @@ class CCBlade(object):
             dNp['dpitch'] = dNp_dX[13, :].reshape(n, 1)
             dTp['dpitch'] = dTp_dX[13, :].reshape(n, 1)
 
-            return Np, Tp, dNp, dTp
+            derivs['dNp'] = dNp
+            derivs['dTp'] = dTp
+
+        loads = {'Np': Np, 'Tp': Tp,
+                 'a': a, 'ap': ap,
+                 'alpha': alpha,
+                 'Cl': cl, 'Cd': cd, 'Cn': cn, 'Ct': ct,
+                 'W': W, 'Re': Re}
+
+        return loads, derivs
 
 
 
 
     def evaluate(self, Uinf, Omega, pitch, coefficients=False):
         """Run the aerodynamic analysis at the specified conditions.
+
         Parameters
         ----------
         Uinf : array_like (m/s)
@@ -954,30 +984,35 @@ class CCBlade(object):
             rotor rotation speed
         pitch : array_like (deg)
             blade pitch setting
-        coefficient : bool, optional
+        coefficients : bool, optional
             if True, results are returned in nondimensional form
+
         Returns
         -------
-        P or CP : ndarray (W)
-            power or power coefficient
-        T or CT : ndarray (N)
-            thrust or thrust coefficient (magnitude)
-        Q or CQ : ndarray (N*m)
-            torque or torque coefficient (magnitude)
-        dP or dCP : dictionary of arrays (present only if derivatives==True)
-            derivatives of power or power coefficient.  Each item in dictionary is a Jacobian.
-            The array sizes and keys are below
-            npts is the number of conditions (len(Uinf)),
-            n = number of stations along blade (len(r))
-            npts x 1: 'dprecone', 'dtilt', 'dhubHt', 'dRhub', 'dRtip', 'dprecurveTip', 'dpresweepTip', 'dyaw'
-            npts x npts: 'dUinf', 'dOmega', 'dpitch'
-            npts x n: 'dr', 'dchord', 'dtheta', 'dprecurve', 'dpresweep'
-            for example dP_dr = dP['dr']  (where dP_dr is an npts x n array)
-            and dP_dr[i, j] = dP_i / dr_j
-        dT or dCT : dictionary of arrays (present only if derivatives==True)
-            derivative of thrust or thrust coefficient.  Same format as dP and dCP
-        dQ or dCQ : dictionary of arrays (present only if derivatives==True)
-            derivative of torque or torque coefficient.  Same format as dP and dCP
+        outputs : dict
+            Dictionary of integrated rotor quantities with the following keys:
+
+            - 'P' (W) or 'CP' : Rotor power or coefficient of
+            - 'T' (N) or 'CT' : Rotor thrust or coefficient of
+            - 'Q' (N*m) or 'CQ' : Rotor torque or coefficient of
+        derivs: dict
+            Dictionary of partial derivatives of rotor quantities with the following keys:
+
+            - dP or dCP : dictionary of arrays (present only if derivatives==True)
+                derivatives of power or power coefficient.  Each item in dictionary is a Jacobian.
+                The array sizes and keys are below
+                npts is the number of conditions (len(Uinf)),
+                n = number of stations along blade (len(r))
+                npts x 1: 'dprecone', 'dtilt', 'dhubHt', 'dRhub', 'dRtip', 'dprecurveTip', 'dpresweepTip', 'dyaw'
+                npts x npts: 'dUinf', 'dOmega', 'dpitch'
+                npts x n: 'dr', 'dchord', 'dtheta', 'dprecurve', 'dpresweep'
+                for example dP_dr = dP['dr']  (where dP_dr is an npts x n array)
+                and dP_dr[i, j] = dP_i / dr_j
+            - dT or dCT : dictionary of arrays (present only if derivatives==True)
+                derivative of thrust or thrust coefficient.  Same format as dP and dCP
+            - dQ or dCQ : dictionary of arrays (present only if derivatives==True)
+                derivative of torque or torque coefficient.  Same format as dP and dCP
+
         Notes
         -----
         CP = P / (q * Uinf * A)
@@ -1016,17 +1051,17 @@ class CCBlade(object):
 
                 if not self.derivatives:
                     # contribution from this azimuthal location
-                    if self.induction:
-                        a, ap, Np, Tp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
-                        # Induction
-                        self.a  = a
-                        self.ap = ap
-                    else:
-                        Np, Tp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+
+                    loads, derivs = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                    Np, Tp = (loads['Np'], loads['Tp'])
 
                 else:
 
-                    Np, Tp, dNp, dTp = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                    loads, derivs = self.distributedAeroLoads(Uinf[i], Omega[i], pitch[i], azimuth)
+                    Np = loads['Np']
+                    Tp = loads['Tp']
+                    dNp = derivs['dNp']
+                    dTp = derivs['dTp']
 
                     dT_ds_sub, dQ_ds_sub, dT_dv_sub, dQ_dv_sub = self.__thrustTorqueDeriv(
                         Np, Tp, self._dNp_dX, self._dTp_dX, self._dNp_dprecurve, self._dTp_dprecurve, *args)
@@ -1104,18 +1139,30 @@ class CCBlade(object):
             # pack derivatives into dictionary
             dT, dQ, dP = self.__thrustTorqueDictionary(dT_ds, dQ_ds, dP_ds, dT_dv, dQ_dv, dP_dv, npts)
         
-        
-        if coefficients:
-            if self.derivatives:
-                return P, T, Q, M, dP, dT, dQ, CP, CT, CQ, CM, dCP, dCT, dCQ
-            else:
-                return P, T, Q, M, CP, CT, CQ, CM
-        else:
-            if self.derivatives:
-                return P, T, Q, M, dP, dT, dQ
-            else:
-                return P, T, Q, M
 
+
+        outputs = {}
+        derivs = {}
+        if coefficients:
+            outputs['CP'] = CP
+            outputs['CT'] = CT
+            outputs['CQ'] = CQ
+            outputs['CM'] = CM
+            if self.derivatives:
+                derivs['dCP'] = dCP
+                derivs['dCT'] = dCT
+                derivs['dCQ'] = dCQ
+        else:
+            outputs['P'] = P
+            outputs['T'] = T
+            outputs['Q'] = Q
+            outputs['M'] = M
+            if self.derivatives:
+                derivs['dP'] = dP
+                derivs['dT'] = dT
+                derivs['dQ'] = dQ
+
+        return outputs, derivs
 
 
 
@@ -1317,7 +1364,9 @@ if __name__ == '__main__':
     azimuth = 90
 
     # evaluate distributed loads
-    Np, Tp = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+    loads, derivs = aeroanalysis.distributedAeroLoads(Uinf, Omega, pitch, azimuth)
+    Np = loads['Np']
+    Tp = loads['Tp']
 
     # plot
     import matplotlib.pyplot as plt
@@ -1328,7 +1377,10 @@ if __name__ == '__main__':
     plt.ylabel('distributed aerodynamic loads (kN)')
     plt.legend(loc='upper left')
 
-    CP, CT, CQ = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficient=True)
+    outputs, _ = aeroanalysis.evaluate([Uinf], [Omega], [pitch], coefficients=True)
+    CP = outputs['CP']
+    CT = outputs['CT']
+    CQ = outputs['CQ']
 
     print(CP, CT, CQ)
 
@@ -1338,7 +1390,10 @@ if __name__ == '__main__':
     Uinf = Omega*pi/30.0 * Rtip/tsr
     pitch = np.zeros_like(tsr)
 
-    CP, CT, CQ = aeroanalysis.evaluate(Uinf, Omega, pitch, coefficient=True)
+    outputs, _ = aeroanalysis.evaluate(Uinf, Omega, pitch, coefficients=True)
+    CP = outputs['CP']
+    CT = outputs['CT']
+    CQ = outputs['CQ']
 
     plt.figure()
     plt.plot(tsr, CP, 'k')
