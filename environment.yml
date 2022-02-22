@@ -1,0 +1,14 @@
+name: test
+
+channels:
+  - conda-forge
+  - defaults
+
+dependencies:
+  - numpy
+  - openmdao
+  - pip
+  - pytest
+  - python
+  - setuptools
+  - scipy
