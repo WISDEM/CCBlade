@@ -579,7 +579,9 @@ class Airfoil(object):
                 if "EOT" in line:
                     break
                 data = [float(s) for s in line.split()]
-
+                if len(data) < 4:
+                    raise ValueError(f"Error: Expected 4 columns of data but found, {data}")
+                
                 alpha.append(data[0])
                 cl.append(data[1])
                 cd.append(data[2])
