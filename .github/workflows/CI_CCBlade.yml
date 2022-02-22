@@ -11,7 +11,7 @@ jobs:
         strategy:
             fail-fast: False
             matrix:
-                os: ["ubuntu-latest", "windows-latest"]
+                os: ["ubuntu-latest"] #, "windows-latest"]
                 python-version: [3.7, 3.8, 3.9]
 
         steps:
@@ -57,6 +57,12 @@ jobs:
                   python-version: ${{ matrix.python-version }}
                   environment-file: environment.yml
 
+            # Install dependencies of WISDEM specific to windows
+            - name: Add dependencies windows specific
+              if: contains( matrix.os, 'windows')
+              run: |
+                  conda install -y m2w64-toolchain libpython
+                  
             # Install 
             - name: Conda Install CCBlade
               shell: pwsh
