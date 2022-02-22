@@ -1,6 +1,9 @@
 import numpy as np
 from openmdao.api import ExplicitComponent
+from scipy.interpolate import PchipInterpolator
+
 from ccblade.ccblade import CCBlade, CCAirfoil
+from ccblade.csystem import DirectionVector
 
 cosd = lambda x: np.cos(np.deg2rad(x))
 sind = lambda x: np.sin(np.deg2rad(x))
@@ -378,14 +381,326 @@ class CCBladeLoads(ExplicitComponent):
         J["loads_Py", "precurve"] = -dTp["dprecurve"]
 
 
+class CCBladeTwist(ExplicitComponent):
+    def initialize(self):
+        self.options.declare("modeling_options")
+        self.options.declare("opt_options")
+
+    def setup(self):
+        modeling_options = self.options["modeling_options"]
+        opt_options = self.options["opt_options"]
+        self.n_span = n_span = modeling_options["WISDEM"]["RotorSE"]["n_span"]
+        # self.n_af          = n_af      = af_init_options['n_af'] # Number of airfoils
+        self.n_aoa = n_aoa = modeling_options["WISDEM"]["RotorSE"]["n_aoa"]  # Number of angle of attacks
+        self.n_Re = n_Re = modeling_options["WISDEM"]["RotorSE"]["n_Re"]  # Number of Reynolds, so far hard set at 1
+        self.n_tab = n_tab = modeling_options["WISDEM"]["RotorSE"][
+            "n_tab"
+        ]  # Number of tabulated data. For distributed aerodynamic control this could be > 1
+        n_opt_chord = opt_options["design_variables"]["blade"]["aero_shape"]["chord"]["n_opt"]
+        n_opt_twist = opt_options["design_variables"]["blade"]["aero_shape"]["twist"]["n_opt"]
+
+        # Inputs
+        self.add_input("Uhub", val=9.0, units="m/s", desc="Undisturbed wind speed")
+
+        self.add_input("tsr", val=0.0, desc="Tip speed ratio")
+        self.add_input("pitch", val=0.0, units="deg", desc="Pitch angle")
+        self.add_input(
+            "r",
+            val=np.zeros(n_span),
+            units="m",
+            desc="radial locations where blade is defined (should be increasing and not go all the way to hub or tip)",
+        )
+        self.add_input(
+            "s_opt_chord",
+            val=np.zeros(n_opt_chord),
+            desc="1D array of the non-dimensional spanwise grid defined along blade axis to optimize the blade chord",
+        )
+        self.add_input(
+            "s_opt_theta",
+            val=np.zeros(n_opt_twist),
+            desc="1D array of the non-dimensional spanwise grid defined along blade axis to optimize the blade twist",
+        )
+        self.add_input("chord", val=np.zeros(n_span), units="m", desc="chord length at each section")
+        self.add_input(
+            "theta_in",
+            val=np.zeros(n_span),
+            units="rad",
+            desc="twist angle at each section (positive decreases angle of attack)",
+        )
+        self.add_input(
+            "aoa_op",
+            val=np.pi * np.ones(n_span),
+            desc="1D array with the operational angles of attack for the airfoils along blade span.",
+            units="rad",
+        )
+        self.add_input("airfoils_aoa", val=np.zeros((n_aoa)), units="deg", desc="angle of attack grid for polars")
+        self.add_input("airfoils_cl", val=np.zeros((n_span, n_aoa, n_Re, n_tab)), desc="lift coefficients, spanwise")
+        self.add_input("airfoils_cd", val=np.zeros((n_span, n_aoa, n_Re, n_tab)), desc="drag coefficients, spanwise")
+        self.add_input("airfoils_cm", val=np.zeros((n_span, n_aoa, n_Re, n_tab)), desc="moment coefficients, spanwise")
+        self.add_input("airfoils_Re", val=np.zeros((n_Re)), desc="Reynolds numbers of polars")
+        self.add_input("Rhub", val=0.0, units="m", desc="hub radius")
+        self.add_input("Rtip", val=0.0, units="m", desc="tip radius")
+        self.add_input(
+            "rthick", val=np.zeros(n_span), desc="1D array of the relative thicknesses of the blade defined along span."
+        )
+        self.add_input("precurve", val=np.zeros(n_span), units="m", desc="precurve at each section")
+        self.add_input("precurveTip", val=0.0, units="m", desc="precurve at tip")
+        self.add_input("presweep", val=np.zeros(n_span), units="m", desc="presweep at each section")
+        self.add_input("presweepTip", val=0.0, units="m", desc="presweep at tip")
+        self.add_input("hub_height", val=0.0, units="m", desc="hub height")
+        self.add_input(
+            "precone",
+            val=0.0,
+            units="deg",
+            desc="precone angle",
+        )
+        self.add_input(
+            "tilt",
+            val=0.0,
+            units="deg",
+            desc="shaft tilt",
+        )
+        self.add_input(
+            "yaw",
+            val=0.0,
+            units="deg",
+            desc="yaw error",
+        )
+        self.add_discrete_input("nBlades", val=0, desc="number of blades")
+        self.add_input("rho", val=1.225, units="kg/m**3", desc="density of air")
+        self.add_input("mu", val=1.81e-5, units="kg/(m*s)", desc="dynamic viscosity of air")
+        self.add_input("shearExp", val=0.0, desc="shear exponent")
+        self.add_discrete_input(
+            "nSector", val=4, desc="number of sectors to divide rotor face into in computing thrust and power"
+        )
+        self.add_discrete_input("tiploss", val=True, desc="include Prandtl tip loss model")
+        self.add_discrete_input("hubloss", val=True, desc="include Prandtl hub loss model")
+        self.add_discrete_input(
+            "wakerotation",
+            val=True,
+            desc="include effect of wake rotation (i.e., tangential induction factor is nonzero)",
+        )
+        self.add_discrete_input("usecd", val=True, desc="use drag coefficient in computing induction factors")
+
+        # Outputs
+        self.add_output(
+            "theta",
+            val=np.zeros(n_span),
+            units="rad",
+            desc="Twist angle at each section (positive decreases angle of attack)",
+        )
+        self.add_output("CP", val=0.0, desc="Rotor power coefficient")
+        self.add_output("CM", val=0.0, desc="Blade flapwise moment coefficient")
+
+        self.add_output(
+            "local_airfoil_velocities",
+            val=np.zeros(n_span),
+            desc="Local relative velocities for the airfoils",
+            units="m/s",
+        )
+
+        self.add_output("P", val=0.0, units="W", desc="Rotor aerodynamic power")
+        self.add_output("T", val=0.0, units="N*m", desc="Rotor aerodynamic thrust")
+        self.add_output("Q", val=0.0, units="N*m", desc="Rotor aerodynamic torque")
+        self.add_output("M", val=0.0, units="N*m", desc="Blade root flapwise moment")
+
+        self.add_output("a", val=np.zeros(n_span), desc="Axial induction  along blade span")
+        self.add_output("ap", val=np.zeros(n_span), desc="Tangential induction along blade span")
+        self.add_output("alpha", val=np.zeros(n_span), units="deg", desc="Angles of attack along blade span")
+        self.add_output("cl", val=np.zeros(n_span), desc="Lift coefficients along blade span")
+        self.add_output("cd", val=np.zeros(n_span), desc="Drag coefficients along blade span")
+        n_opt = opt_options["design_variables"]["blade"]["aero_shape"]["twist"]["n_opt"]
+        self.add_output("cl_n_opt", val=np.zeros(n_opt), desc="Lift coefficients along blade span")
+        self.add_output("cd_n_opt", val=np.zeros(n_opt), desc="Drag coefficients along blade span")
+        self.add_output(
+            "Px_b", val=np.zeros(n_span), units="N/m", desc="Distributed loads in blade-aligned x-direction"
+        )
+        self.add_output(
+            "Py_b", val=np.zeros(n_span), units="N/m", desc="Distributed loads in blade-aligned y-direction"
+        )
+        self.add_output(
+            "Pz_b", val=np.zeros(n_span), units="N/m", desc="Distributed loads in blade-aligned z-direction"
+        )
+        self.add_output("Px_af", val=np.zeros(n_span), units="N/m", desc="Distributed loads in airfoil x-direction")
+        self.add_output("Py_af", val=np.zeros(n_span), units="N/m", desc="Distributed loads in airfoil y-direction")
+        self.add_output("Pz_af", val=np.zeros(n_span), units="N/m", desc="Distributed loads in airfoil z-direction")
+        self.add_output("LiftF", val=np.zeros(n_span), units="N/m", desc="Distributed lift force")
+        self.add_output("DragF", val=np.zeros(n_span), units="N/m", desc="Distributed drag force")
+        self.add_output("L_n_opt", val=np.zeros(n_opt), units="N/m", desc="Distributed lift force")
+        self.add_output("D_n_opt", val=np.zeros(n_opt), units="N/m", desc="Distributed drag force")
+
+        self.declare_partials("*", "*", method="fd")
+
+    def compute(self, inputs, outputs, discrete_inputs, discrete_outputs):
+
+        # Create Airfoil class instances
+        af = [None] * self.n_span
+        for i in range(self.n_span):
+            if self.n_tab > 1:
+                ref_tab = int(np.floor(self.n_tab / 2))
+                af[i] = CCAirfoil(
+                    inputs["airfoils_aoa"],
+                    inputs["airfoils_Re"],
+                    inputs["airfoils_cl"][i, :, :, ref_tab],
+                    inputs["airfoils_cd"][i, :, :, ref_tab],
+                    inputs["airfoils_cm"][i, :, :, ref_tab],
+                )
+            else:
+                af[i] = CCAirfoil(
+                    inputs["airfoils_aoa"],
+                    inputs["airfoils_Re"],
+                    inputs["airfoils_cl"][i, :, :, 0],
+                    inputs["airfoils_cd"][i, :, :, 0],
+                    inputs["airfoils_cm"][i, :, :, 0],
+                )
+
+        # Create the CCBlade class instance
+        ccblade = CCBlade(
+            inputs["r"],
+            inputs["chord"],
+            np.zeros_like(inputs["chord"]),
+            af,
+            inputs["Rhub"],
+            inputs["Rtip"],
+            discrete_inputs["nBlades"],
+            inputs["rho"],
+            inputs["mu"],
+            inputs["precone"],
+            inputs["tilt"],
+            inputs["yaw"],
+            inputs["shearExp"],
+            inputs["hub_height"],
+            discrete_inputs["nSector"],
+            inputs["precurve"],
+            inputs["precurveTip"],
+            inputs["presweep"],
+            inputs["presweepTip"],
+            discrete_inputs["tiploss"],
+            discrete_inputs["hubloss"],
+            discrete_inputs["wakerotation"],
+            discrete_inputs["usecd"],
+        )
+
+        Omega = inputs["tsr"] * inputs["Uhub"] / inputs["r"][-1] * 30.0 / np.pi
+
+        if self.options["opt_options"]["design_variables"]["blade"]["aero_shape"]["twist"]["inverse"]:
+            if self.options["opt_options"]["design_variables"]["blade"]["aero_shape"]["twist"]["flag"]:
+                raise Exception(
+                    "Twist cannot be simultaneously optimized and set to be defined inverting the BEM equations. Please check your analysis options yaml."
+                )
+            # Find cl and cd along blade span. Mix inputs from the airfoil INN (if active) and the airfoil for max efficiency
+            cl = np.zeros(self.n_span)
+            cd = np.zeros(self.n_span)
+            alpha = np.zeros(self.n_span)
+            margin2stall = self.options["opt_options"]["constraints"]["blade"]["stall"]["margin"] * 180.0 / np.pi
+            Re = np.array(Omega * inputs["r"] * inputs["chord"] * inputs["rho"] / inputs["mu"])
+            aoa_op = inputs["aoa_op"]
+            for i in range(self.n_span):
+                # Use the required angle of attack if defined. If it isn't defined (==pi), then take the stall point minus the margin
+                if abs(aoa_op[i] - np.pi) < 1.0e-4:
+                    af[i].eval_unsteady(
+                        inputs["airfoils_aoa"],
+                        inputs["airfoils_cl"][i, :, 0, 0],
+                        inputs["airfoils_cd"][i, :, 0, 0],
+                        inputs["airfoils_cm"][i, :, 0, 0],
+                    )
+                    alpha[i] = (af[i].unsteady["alpha1"] - margin2stall) / 180.0 * np.pi
+                else:
+                    alpha[i] = aoa_op[i]
+                cl[i], cd[i] = af[i].evaluate(alpha[i], Re[i])
+
+            # Overwrite aoa of high thickness airfoils at blade root
+            idx_min = [i for i, thk in enumerate(inputs["rthick"]) if thk < 95.0][0]
+            alpha[0:idx_min] = alpha[idx_min]
+
+            # Call ccblade in inverse mode for desired alpha, cl, and cd along blade span
+            ccblade.inverse_analysis = True
+            ccblade.alpha = alpha
+            ccblade.cl = cl
+            ccblade.cd = cd
+            _, _ = ccblade.evaluate([inputs["Uhub"]], [Omega], [inputs["pitch"]], coefficients=False)
+
+            # Cap twist root region to 20 degrees
+            for i in range(len(ccblade.theta)):
+                if ccblade.theta[-i - 1] > 20.0 / 180.0 * np.pi:
+                    ccblade.theta[0 : len(ccblade.theta) - i] = 20.0 / 180.0 * np.pi
+                    break
+        else:
+            ccblade.theta = inputs["theta_in"]
+
+        # Smooth out twist profile if we're doing inverse and inn_af design
+        if (
+            self.options["opt_options"]["design_variables"]["blade"]["aero_shape"]["twist"]["inverse"]
+            and self.options["modeling_options"]["WISDEM"]["RotorSE"]["inn_af"]
+        ):
+            n_opt = self.options["opt_options"]["design_variables"]["blade"]["aero_shape"]["twist"]["n_opt"]
+            training_theta = np.copy(ccblade.theta)
+            s = (inputs["r"] - inputs["r"][0]) / (inputs["r"][-1] - inputs["r"][0])
+
+            twist_spline = PchipInterpolator(s, training_theta)
+            theta_opt = twist_spline(inputs["s_opt_theta"])
+
+            twist_spline = PchipInterpolator(inputs["s_opt_theta"], theta_opt)
+            theta_full = twist_spline(s)
+            ccblade.theta = theta_full
+
+        # Turn off the inverse analysis
+        ccblade.inverse_analysis = False
+
+        # Call ccblade at azimuth 0 deg
+        loads, _ = ccblade.distributedAeroLoads(inputs["Uhub"][0], Omega[0], inputs["pitch"][0], 0.0)
+
+        # Call ccblade evaluate (averaging across azimuth)
+        myout, _ = ccblade.evaluate([inputs["Uhub"]], [Omega], [inputs["pitch"]], coefficients=True)
+        CP, CMb, W = [myout[key] for key in ["CP", "CMb", "W"]]
+
+        # import matplotlib.pyplot as plt
+        # plt.figure()
+        # plt.plot(inputs['r'], alpha*180./np.pi, '-')
+        # plt.plot(inputs['r'], loads["alpha"], ':')
+        # plt.xlabel('blade fraction')
+        # plt.ylabel('aoa (deg)')
+        # plt.legend()
+        # plt.show()
+        # exit()
+
+        # Return twist angle
+        outputs["theta"] = ccblade.theta
+        outputs["CP"] = CP[0]
+        outputs["CM"] = CMb[0]
+        outputs["local_airfoil_velocities"] = np.nan_to_num(W)
+        outputs["a"] = loads["a"]
+        outputs["ap"] = loads["ap"]
+        outputs["alpha"] = loads["alpha"]
+        outputs["cl"] = loads["Cl"]
+        outputs["cd"] = loads["Cd"]
+        s = (inputs["r"] - inputs["r"][0]) / (inputs["r"][-1] - inputs["r"][0])
+        outputs["cl_n_opt"] = np.interp(inputs["s_opt_theta"], s, loads["Cl"])
+        outputs["cd_n_opt"] = np.interp(inputs["s_opt_theta"], s, loads["Cd"])
+        # Forces in the blade coordinate system, pag 21 of https://www.nrel.gov/docs/fy13osti/58819.pdf
+        outputs["Px_b"] = loads["Np"]
+        outputs["Py_b"] = -loads["Tp"]
+        outputs["Pz_b"] = 0 * loads["Np"]
+        # Forces in the airfoil coordinate system, pag 21 of https://www.nrel.gov/docs/fy13osti/58819.pdf
+        P_b = DirectionVector(loads["Np"], -loads["Tp"], 0)
+        P_af = P_b.bladeToAirfoil(ccblade.theta * 180.0 / np.pi)
+        outputs["Px_af"] = P_af.x
+        outputs["Py_af"] = P_af.y
+        outputs["Pz_af"] = P_af.z
+        # Lift and drag forces
+        F = P_b.bladeToAirfoil(ccblade.theta * 180.0 / np.pi + loads["alpha"] + inputs["pitch"])
+        outputs["LiftF"] = F.x
+        outputs["DragF"] = F.y
+        outputs["L_n_opt"] = np.interp(inputs["s_opt_theta"], s, F.x)
+        outputs["D_n_opt"] = np.interp(inputs["s_opt_theta"], s, F.y)
+        # print(CP[0])
+
 
 class CCBladeEvaluate(ExplicitComponent):
     """
-    Standalone component for CCBlade that is only a light wrapper on CCBlade().
-
-    Currently, this component is not used in any workflow, but it is a
-    convenient way to test the derivatives coming out of CCBlade using OpenMDAO's
-    check_partials method.
+    Standalone component for CCBlade that is only a light wrapper on CCBlade()
+    to run the instance evaluate and compute aerodynamic hub forces and moments, blade
+    root flapwise moment, and power. The coefficients are also computed.
 
     """
 
@@ -417,6 +732,8 @@ class CCBladeEvaluate(ExplicitComponent):
         self.add_input("yaw", val=0.0, units="deg")
         self.add_input("precurve", val=np.zeros(n_span), units="m")
         self.add_input("precurveTip", val=0.0, units="m")
+        self.add_input("presweep", val=np.zeros(n_span), units="m")
+        self.add_input("presweepTip", val=0.0, units="m")
 
         # parameters
         self.add_input("airfoils_cl", val=np.zeros((n_span, n_aoa, n_Re, n_tab)))
@@ -436,15 +753,14 @@ class CCBladeEvaluate(ExplicitComponent):
         self.add_discrete_input("usecd", val=True)
 
         # outputs
-        self.add_output("P", val=0.0, units="W")
-        self.add_output("T", val=0.0, units="N")
-        self.add_output("Q", val=0.0, units="N/m")
-        self.add_output("M", val=0.0, units="N/m")
-
-        self.add_output("CP", val=0.0)
-        self.add_output("CT", val=0.0)
-        self.add_output("CQ", val=0.0)
-        self.add_output("CM", val=0.0)
+        self.add_output("P", val=0.0, units="W", desc="Rotor aerodynamic power")
+        self.add_output("Mb", val=0.0, units="N/m", desc="Aerodynamic blade root flapwise moment")
+        self.add_output("Fhub", val=np.zeros(3), units="N", desc="Aerodynamic forces at hub center in the hub c.s.")
+        self.add_output("Mhub", val=np.zeros(3), units="N*m", desc="Aerodynamic moments at hub center in the hub c.s.")
+        self.add_output("CP", val=0.0, desc="Rotor aerodynamic power coefficient")
+        self.add_output("CMb", val=0.0, desc="Aerodynamic blade root flapwise moment coefficient")
+        self.add_output("CFhub", val=np.zeros(3), desc="Aerodynamic force coefficients at hub center in the hub c.s.")
+        self.add_output("CMhub", val=np.zeros(3), desc="Aerodynamic moment coefficients at hub center in the hub c.s.")
 
         self.declare_partials("*", "*")
         self.declare_partials("*", "airfoils*", dependent=False)
@@ -461,6 +777,8 @@ class CCBladeEvaluate(ExplicitComponent):
         yaw = inputs["yaw"]
         precurve = inputs["precurve"]
         precurveTip = inputs["precurveTip"]
+        presweep = inputs["presweep"]
+        presweepTip = inputs["presweepTip"]
         B = discrete_inputs["nBlades"]
         rho = inputs["rho"]
         mu = inputs["mu"]
@@ -506,6 +824,8 @@ class CCBladeEvaluate(ExplicitComponent):
             nSector,
             precurve,
             precurveTip,
+            presweep,
+            presweepTip,
             tiploss=tiploss,
             hubloss=hubloss,
             wakerotation=wakerotation,
@@ -513,17 +833,15 @@ class CCBladeEvaluate(ExplicitComponent):
             derivatives=False,
         )
 
-        loads, _ = ccblade.evaluate(V_load, Omega_load, pitch_load)
-        outputs["P"] = loads["P"]
-        outputs["T"] = loads["T"]
-        outputs["Q"] = loads["Q"]
-        outputs["M"] = loads["M"]
-
         loads, _ = ccblade.evaluate(V_load, Omega_load, pitch_load, coefficients=True)
+        outputs["P"] = loads["P"]
+        outputs["Mb"] = loads["Mb"]
         outputs["CP"] = loads["CP"]
-        outputs["CT"] = loads["CT"]
-        outputs["CQ"] = loads["CQ"]
-        outputs["CM"] = loads["CM"]
+        outputs["CMb"] = loads["CMb"]
+        outputs["Fhub"] = np.array([loads["T"], loads["Y"], loads["Z"]])
+        outputs["Mhub"] = np.array([loads["Q"], loads["My"], loads["Mz"]])
+        outputs["CFhub"] = np.array([loads["CT"], loads["CY"], loads["CZ"]])
+        outputs["CMhub"] = np.array([loads["CQ"], loads["CMy"], loads["CMz"]])
 
     def compute_partials(self, inputs, J, discrete_inputs):
         r = inputs["r"]
@@ -537,6 +855,8 @@ class CCBladeEvaluate(ExplicitComponent):
         yaw = inputs["yaw"]
         precurve = inputs["precurve"]
         precurveTip = inputs["precurveTip"]
+        presweep = inputs["presweep"]
+        presweepTip = inputs["presweepTip"]
         B = discrete_inputs["nBlades"]
         rho = inputs["rho"]
         mu = inputs["mu"]
@@ -582,6 +902,8 @@ class CCBladeEvaluate(ExplicitComponent):
             nSector,
             precurve,
             precurveTip,
+            presweep,
+            presweepTip,
             tiploss=tiploss,
             hubloss=hubloss,
             wakerotation=wakerotation,
@@ -589,7 +911,7 @@ class CCBladeEvaluate(ExplicitComponent):
             derivatives=True,
         )
 
-        loads, derivs = ccblade.evaluate(V_load, Omega_load, pitch_load)
+        loads, derivs = ccblade.evaluate(V_load, Omega_load, pitch_load, coefficients=True)
 
         dP = derivs["dP"]
         J["P", "r"] = dP["dr"]
@@ -607,59 +929,141 @@ class CCBladeEvaluate(ExplicitComponent):
         J["P", "pitch_load"] = np.squeeze(dP["dpitch"])
         J["P", "precurve"] = dP["dprecurve"]
         J["P", "precurveTip"] = dP["dprecurveTip"]
+        J["P", "presweep"] = dP["dpresweep"]
+        J["P", "presweepTip"] = dP["dpresweepTip"]
 
         dT = derivs["dT"]
-        J["T", "r"] = dT["dr"]
-        J["T", "chord"] = dT["dchord"]
-        J["T", "theta"] = dT["dtheta"]
-        J["T", "Rhub"] = np.squeeze(dT["dRhub"])
-        J["T", "Rtip"] = np.squeeze(dT["dRtip"])
-        J["T", "hub_height"] = np.squeeze(dT["dhubHt"])
-        J["T", "precone"] = np.squeeze(dT["dprecone"])
-        J["T", "tilt"] = np.squeeze(dT["dtilt"])
-        J["T", "yaw"] = np.squeeze(dT["dyaw"])
-        J["T", "shearExp"] = np.squeeze(dT["dshear"])
-        J["T", "V_load"] = np.squeeze(dT["dUinf"])
-        J["T", "Omega_load"] = np.squeeze(dT["dOmega"])
-        J["T", "pitch_load"] = np.squeeze(dT["dpitch"])
-        J["T", "precurve"] = dT["dprecurve"]
-        J["T", "precurveTip"] = dT["dprecurveTip"]
+        J["Fhub", "r"][0, :] = dT["dr"]
+        J["Fhub", "chord"][0, :] = dT["dchord"]
+        J["Fhub", "theta"][0, :] = dT["dtheta"]
+        J["Fhub", "Rhub"][0, :] = np.squeeze(dT["dRhub"])
+        J["Fhub", "Rtip"][0, :] = np.squeeze(dT["dRtip"])
+        J["Fhub", "hub_height"][0, :] = np.squeeze(dT["dhubHt"])
+        J["Fhub", "precone"][0, :] = np.squeeze(dT["dprecone"])
+        J["Fhub", "tilt"][0, :] = np.squeeze(dT["dtilt"])
+        J["Fhub", "yaw"][0, :] = np.squeeze(dT["dyaw"])
+        J["Fhub", "shearExp"][0, :] = np.squeeze(dT["dshear"])
+        J["Fhub", "V_load"][0, :] = np.squeeze(dT["dUinf"])
+        J["Fhub", "Omega_load"][0, :] = np.squeeze(dT["dOmega"])
+        J["Fhub", "pitch_load"][0, :] = np.squeeze(dT["dpitch"])
+        J["Fhub", "precurve"][0, :] = dT["dprecurve"]
+        J["Fhub", "precurveTip"][0, :] = dT["dprecurveTip"]
+        J["Fhub", "presweep"][0, :] = dT["dpresweep"]
+        J["Fhub", "presweepTip"][0, :] = dT["dpresweepTip"]
+
+        dY = derivs["dY"]
+        J["Fhub", "r"][1, :] = dY["dr"]
+        J["Fhub", "chord"][1, :] = dY["dchord"]
+        J["Fhub", "theta"][1, :] = dY["dtheta"]
+        J["Fhub", "Rhub"][1, :] = np.squeeze(dY["dRhub"])
+        J["Fhub", "Rtip"][1, :] = np.squeeze(dY["dRtip"])
+        J["Fhub", "hub_height"][1, :] = np.squeeze(dY["dhubHt"])
+        J["Fhub", "precone"][1, :] = np.squeeze(dY["dprecone"])
+        J["Fhub", "tilt"][1, :] = np.squeeze(dY["dtilt"])
+        J["Fhub", "yaw"][1, :] = np.squeeze(dY["dyaw"])
+        J["Fhub", "shearExp"][1, :] = np.squeeze(dY["dshear"])
+        J["Fhub", "V_load"][1, :] = np.squeeze(dY["dUinf"])
+        J["Fhub", "Omega_load"][1, :] = np.squeeze(dY["dOmega"])
+        J["Fhub", "pitch_load"][1, :] = np.squeeze(dY["dpitch"])
+        J["Fhub", "precurve"][1, :] = dY["dprecurve"]
+        J["Fhub", "precurveTip"][1, :] = dY["dprecurveTip"]
+        J["Fhub", "presweep"][1, :] = dY["dpresweep"]
+        J["Fhub", "presweepTip"][1, :] = dY["dpresweepTip"]
+
+        dZ = derivs["dZ"]
+        J["Fhub", "r"][2, :] = dZ["dr"]
+        J["Fhub", "chord"][2, :] = dZ["dchord"]
+        J["Fhub", "theta"][2, :] = dZ["dtheta"]
+        J["Fhub", "Rhub"][2, :] = np.squeeze(dZ["dRhub"])
+        J["Fhub", "Rtip"][2, :] = np.squeeze(dZ["dRtip"])
+        J["Fhub", "hub_height"][2, :] = np.squeeze(dZ["dhubHt"])
+        J["Fhub", "precone"][2, :] = np.squeeze(dZ["dprecone"])
+        J["Fhub", "tilt"][2, :] = np.squeeze(dZ["dtilt"])
+        J["Fhub", "yaw"][2, :] = np.squeeze(dZ["dyaw"])
+        J["Fhub", "shearExp"][2, :] = np.squeeze(dZ["dshear"])
+        J["Fhub", "V_load"][2, :] = np.squeeze(dZ["dUinf"])
+        J["Fhub", "Omega_load"][2, :] = np.squeeze(dZ["dOmega"])
+        J["Fhub", "pitch_load"][2, :] = np.squeeze(dZ["dpitch"])
+        J["Fhub", "precurve"][2, :] = dZ["dprecurve"]
+        J["Fhub", "precurveTip"][2, :] = dZ["dprecurveTip"]
+        J["Fhub", "presweep"][2, :] = dZ["dpresweep"]
+        J["Fhub", "presweepTip"][2, :] = dZ["dpresweepTip"]
 
         dQ = derivs["dQ"]
-        J["Q", "r"] = dQ["dr"]
-        J["Q", "chord"] = dQ["dchord"]
-        J["Q", "theta"] = dQ["dtheta"]
-        J["Q", "Rhub"] = np.squeeze(dQ["dRhub"])
-        J["Q", "Rtip"] = np.squeeze(dQ["dRtip"])
-        J["Q", "hub_height"] = np.squeeze(dQ["dhubHt"])
-        J["Q", "precone"] = np.squeeze(dQ["dprecone"])
-        J["Q", "tilt"] = np.squeeze(dQ["dtilt"])
-        J["Q", "yaw"] = np.squeeze(dQ["dyaw"])
-        J["Q", "shearExp"] = np.squeeze(dQ["dshear"])
-        J["Q", "V_load"] = np.squeeze(dQ["dUinf"])
-        J["Q", "Omega_load"] = np.squeeze(dQ["dOmega"])
-        J["Q", "pitch_load"] = np.squeeze(dQ["dpitch"])
-        J["Q", "precurve"] = dQ["dprecurve"]
-        J["Q", "precurveTip"] = dQ["dprecurveTip"]
+        J["Mhub", "r"][0, :] = dQ["dr"]
+        J["Mhub", "chord"][0, :] = dQ["dchord"]
+        J["Mhub", "theta"][0, :] = dQ["dtheta"]
+        J["Mhub", "Rhub"][0, :] = np.squeeze(dQ["dRhub"])
+        J["Mhub", "Rtip"][0, :] = np.squeeze(dQ["dRtip"])
+        J["Mhub", "hub_height"][0, :] = np.squeeze(dQ["dhubHt"])
+        J["Mhub", "precone"][0, :] = np.squeeze(dQ["dprecone"])
+        J["Mhub", "tilt"][0, :] = np.squeeze(dQ["dtilt"])
+        J["Mhub", "yaw"][0, :] = np.squeeze(dQ["dyaw"])
+        J["Mhub", "shearExp"][0, :] = np.squeeze(dQ["dshear"])
+        J["Mhub", "V_load"][0, :] = np.squeeze(dQ["dUinf"])
+        J["Mhub", "Omega_load"][0, :] = np.squeeze(dQ["dOmega"])
+        J["Mhub", "pitch_load"][0, :] = np.squeeze(dQ["dpitch"])
+        J["Mhub", "precurve"][0, :] = dQ["dprecurve"]
+        J["Mhub", "precurveTip"][0, :] = dQ["dprecurveTip"]
+        J["Mhub", "presweep"][0, :] = dQ["dpresweep"]
+        J["Mhub", "presweepTip"][0, :] = dQ["dpresweepTip"]
 
-        dM = derivs["dM"]
-        J["M", "r"] = dM["dr"]
-        J["M", "chord"] = dM["dchord"]
-        J["M", "theta"] = dM["dtheta"]
-        J["M", "Rhub"] = np.squeeze(dM["dRhub"])
-        J["M", "Rtip"] = np.squeeze(dM["dRtip"])
-        J["M", "hub_height"] = np.squeeze(dM["dhubHt"])
-        J["M", "precone"] = np.squeeze(dM["dprecone"])
-        J["M", "tilt"] = np.squeeze(dM["dtilt"])
-        J["M", "yaw"] = np.squeeze(dM["dyaw"])
-        J["M", "shearExp"] = np.squeeze(dM["dshear"])
-        J["M", "V_load"] = np.squeeze(dM["dUinf"])
-        J["M", "Omega_load"] = np.squeeze(dM["dOmega"])
-        J["M", "pitch_load"] = np.squeeze(dM["dpitch"])
-        J["M", "precurve"] = dM["dprecurve"]
-        J["M", "precurveTip"] = dM["dprecurveTip"]
+        dMy = derivs["dMy"]
+        J["Mhub", "r"][1, :] = dMy["dr"]
+        J["Mhub", "chord"][1, :] = dMy["dchord"]
+        J["Mhub", "theta"][1, :] = dMy["dtheta"]
+        J["Mhub", "Rhub"][1, :] = np.squeeze(dMy["dRhub"])
+        J["Mhub", "Rtip"][1, :] = np.squeeze(dMy["dRtip"])
+        J["Mhub", "hub_height"][1, :] = np.squeeze(dMy["dhubHt"])
+        J["Mhub", "precone"][1, :] = np.squeeze(dMy["dprecone"])
+        J["Mhub", "tilt"][1, :] = np.squeeze(dMy["dtilt"])
+        J["Mhub", "yaw"][1, :] = np.squeeze(dMy["dyaw"])
+        J["Mhub", "shearExp"][1, :] = np.squeeze(dMy["dshear"])
+        J["Mhub", "V_load"][1, :] = np.squeeze(dMy["dUinf"])
+        J["Mhub", "Omega_load"][1, :] = np.squeeze(dMy["dOmega"])
+        J["Mhub", "pitch_load"][1, :] = np.squeeze(dMy["dpitch"])
+        J["Mhub", "precurve"][1, :] = dMy["dprecurve"]
+        J["Mhub", "precurveTip"][1, :] = dMy["dprecurveTip"]
+        J["Mhub", "presweep"][1, :] = dMy["dpresweep"]
+        J["Mhub", "presweepTip"][1, :] = dMy["dpresweepTip"]
 
-        loads, derivs = ccblade.evaluate(V_load, Omega_load, pitch_load, coefficients=True)
+        dMz = derivs["dMz"]
+        J["Mhub", "r"][2, :] = dMz["dr"]
+        J["Mhub", "chord"][2, :] = dMz["dchord"]
+        J["Mhub", "theta"][2, :] = dMz["dtheta"]
+        J["Mhub", "Rhub"][2, :] = np.squeeze(dMz["dRhub"])
+        J["Mhub", "Rtip"][2, :] = np.squeeze(dMz["dRtip"])
+        J["Mhub", "hub_height"][2, :] = np.squeeze(dMz["dhubHt"])
+        J["Mhub", "precone"][2, :] = np.squeeze(dMz["dprecone"])
+        J["Mhub", "tilt"][2, :] = np.squeeze(dMz["dtilt"])
+        J["Mhub", "yaw"][2, :] = np.squeeze(dMz["dyaw"])
+        J["Mhub", "shearExp"][2, :] = np.squeeze(dMz["dshear"])
+        J["Mhub", "V_load"][2, :] = np.squeeze(dMz["dUinf"])
+        J["Mhub", "Omega_load"][2, :] = np.squeeze(dMz["dOmega"])
+        J["Mhub", "pitch_load"][2, :] = np.squeeze(dMz["dpitch"])
+        J["Mhub", "precurve"][2, :] = dMz["dprecurve"]
+        J["Mhub", "precurveTip"][2, :] = dMz["dprecurveTip"]
+        J["Mhub", "presweep"][2, :] = dMz["dpresweep"]
+        J["Mhub", "presweepTip"][2, :] = dMz["dpresweepTip"]
+
+        dMb = derivs["dMb"]
+        J["Mb", "r"] = dMb["dr"]
+        J["Mb", "chord"] = dMb["dchord"]
+        J["Mb", "theta"] = dMb["dtheta"]
+        J["Mb", "Rhub"] = np.squeeze(dMb["dRhub"])
+        J["Mb", "Rtip"] = np.squeeze(dMb["dRtip"])
+        J["Mb", "hub_height"] = np.squeeze(dMb["dhubHt"])
+        J["Mb", "precone"] = np.squeeze(dMb["dprecone"])
+        J["Mb", "tilt"] = np.squeeze(dMb["dtilt"])
+        J["Mb", "yaw"] = np.squeeze(dMb["dyaw"])
+        J["Mb", "shearExp"] = np.squeeze(dMb["dshear"])
+        J["Mb", "V_load"] = np.squeeze(dMb["dUinf"])
+        J["Mb", "Omega_load"] = np.squeeze(dMb["dOmega"])
+        J["Mb", "pitch_load"] = np.squeeze(dMb["dpitch"])
+        J["Mb", "precurve"] = dMb["dprecurve"]
+        J["Mb", "precurveTip"] = dMb["dprecurveTip"]
+        J["Mb", "presweep"] = dMb["dpresweep"]
+        J["Mb", "presweepTip"] = dMb["dpresweepTip"]
 
         dCP = derivs["dCP"]
         J["CP", "r"] = dCP["dr"]
@@ -677,54 +1081,138 @@ class CCBladeEvaluate(ExplicitComponent):
         J["CP", "pitch_load"] = np.squeeze(dCP["dpitch"])
         J["CP", "precurve"] = dCP["dprecurve"]
         J["CP", "precurveTip"] = dCP["dprecurveTip"]
+        J["CP", "presweep"] = dCP["dpresweep"]
+        J["CP", "presweepTip"] = dCP["dpresweepTip"]
 
         dCT = derivs["dCT"]
-        J["CT", "r"] = dCT["dr"]
-        J["CT", "chord"] = dCT["dchord"]
-        J["CT", "theta"] = dCT["dtheta"]
-        J["CT", "Rhub"] = np.squeeze(dCT["dRhub"])
-        J["CT", "Rtip"] = np.squeeze(dCT["dRtip"])
-        J["CT", "hub_height"] = np.squeeze(dCT["dhubHt"])
-        J["CT", "precone"] = np.squeeze(dCT["dprecone"])
-        J["CT", "tilt"] = np.squeeze(dCT["dtilt"])
-        J["CT", "yaw"] = np.squeeze(dCT["dyaw"])
-        J["CT", "shearExp"] = np.squeeze(dCT["dshear"])
-        J["CT", "V_load"] = np.squeeze(dCT["dUinf"])
-        J["CT", "Omega_load"] = np.squeeze(dCT["dOmega"])
-        J["CT", "pitch_load"] = np.squeeze(dCT["dpitch"])
-        J["CT", "precurve"] = dCT["dprecurve"]
-        J["CT", "precurveTip"] = dCT["dprecurveTip"]
+        J["CFhub", "r"][0, :] = dCT["dr"]
+        J["CFhub", "chord"][0, :] = dCT["dchord"]
+        J["CFhub", "theta"][0, :] = dCT["dtheta"]
+        J["CFhub", "Rhub"][0, :] = np.squeeze(dCT["dRhub"])
+        J["CFhub", "Rtip"][0, :] = np.squeeze(dCT["dRtip"])
+        J["CFhub", "hub_height"][0, :] = np.squeeze(dCT["dhubHt"])
+        J["CFhub", "precone"][0, :] = np.squeeze(dCT["dprecone"])
+        J["CFhub", "tilt"][0, :] = np.squeeze(dCT["dtilt"])
+        J["CFhub", "yaw"][0, :] = np.squeeze(dCT["dyaw"])
+        J["CFhub", "shearExp"][0, :] = np.squeeze(dCT["dshear"])
+        J["CFhub", "V_load"][0, :] = np.squeeze(dCT["dUinf"])
+        J["CFhub", "Omega_load"][0, :] = np.squeeze(dCT["dOmega"])
+        J["CFhub", "pitch_load"][0, :] = np.squeeze(dCT["dpitch"])
+        J["CFhub", "precurve"][0, :] = dCT["dprecurve"]
+        J["CFhub", "precurveTip"][0, :] = dCT["dprecurveTip"]
+        J["CFhub", "presweep"][0, :] = dCT["dpresweep"]
+        J["CFhub", "presweepTip"][0, :] = dCT["dpresweepTip"]
+
+        dCY = derivs["dCY"]
+        J["CFhub", "r"][1, :] = dCY["dr"]
+        J["CFhub", "chord"][1, :] = dCY["dchord"]
+        J["CFhub", "theta"][1, :] = dCY["dtheta"]
+        J["CFhub", "Rhub"][1, :] = np.squeeze(dCY["dRhub"])
+        J["CFhub", "Rtip"][1, :] = np.squeeze(dCY["dRtip"])
+        J["CFhub", "hub_height"][1, :] = np.squeeze(dCY["dhubHt"])
+        J["CFhub", "precone"][1, :] = np.squeeze(dCY["dprecone"])
+        J["CFhub", "tilt"][1, :] = np.squeeze(dCY["dtilt"])
+        J["CFhub", "yaw"][1, :] = np.squeeze(dCY["dyaw"])
+        J["CFhub", "shearExp"][1, :] = np.squeeze(dCY["dshear"])
+        J["CFhub", "V_load"][1, :] = np.squeeze(dCY["dUinf"])
+        J["CFhub", "Omega_load"][1, :] = np.squeeze(dCY["dOmega"])
+        J["CFhub", "pitch_load"][1, :] = np.squeeze(dCY["dpitch"])
+        J["CFhub", "precurve"][1, :] = dCY["dprecurve"]
+        J["CFhub", "precurveTip"][1, :] = dCY["dprecurveTip"]
+        J["CFhub", "presweep"][1, :] = dCY["dpresweep"]
+        J["CFhub", "presweepTip"][1, :] = dCY["dpresweepTip"]
+
+        dCZ = derivs["dCZ"]
+        J["CFhub", "r"][2, :] = dCZ["dr"]
+        J["CFhub", "chord"][2, :] = dCZ["dchord"]
+        J["CFhub", "theta"][2, :] = dCZ["dtheta"]
+        J["CFhub", "Rhub"][2, :] = np.squeeze(dCZ["dRhub"])
+        J["CFhub", "Rtip"][2, :] = np.squeeze(dCZ["dRtip"])
+        J["CFhub", "hub_height"][2, :] = np.squeeze(dCZ["dhubHt"])
+        J["CFhub", "precone"][2, :] = np.squeeze(dCZ["dprecone"])
+        J["CFhub", "tilt"][2, :] = np.squeeze(dCZ["dtilt"])
+        J["CFhub", "yaw"][2, :] = np.squeeze(dCZ["dyaw"])
+        J["CFhub", "shearExp"][2, :] = np.squeeze(dCZ["dshear"])
+        J["CFhub", "V_load"][2, :] = np.squeeze(dCZ["dUinf"])
+        J["CFhub", "Omega_load"][2, :] = np.squeeze(dCZ["dOmega"])
+        J["CFhub", "pitch_load"][2, :] = np.squeeze(dCZ["dpitch"])
+        J["CFhub", "precurve"][2, :] = dCZ["dprecurve"]
+        J["CFhub", "precurveTip"][2, :] = dCZ["dprecurveTip"]
+        J["CFhub", "presweep"][2, :] = dCZ["dpresweep"]
+        J["CFhub", "presweepTip"][2, :] = dCZ["dpresweepTip"]
 
         dCQ = derivs["dCQ"]
-        J["CQ", "r"] = dCQ["dr"]
-        J["CQ", "chord"] = dCQ["dchord"]
-        J["CQ", "theta"] = dCQ["dtheta"]
-        J["CQ", "Rhub"] = np.squeeze(dCQ["dRhub"])
-        J["CQ", "Rtip"] = np.squeeze(dCQ["dRtip"])
-        J["CQ", "hub_height"] = np.squeeze(dCQ["dhubHt"])
-        J["CQ", "precone"] = np.squeeze(dCQ["dprecone"])
-        J["CQ", "tilt"] = np.squeeze(dCQ["dtilt"])
-        J["CQ", "yaw"] = np.squeeze(dCQ["dyaw"])
-        J["CQ", "shearExp"] = np.squeeze(dCQ["dshear"])
-        J["CQ", "V_load"] = np.squeeze(dCQ["dUinf"])
-        J["CQ", "Omega_load"] = np.squeeze(dCQ["dOmega"])
-        J["CQ", "pitch_load"] = np.squeeze(dCQ["dpitch"])
-        J["CQ", "precurve"] = dCQ["dprecurve"]
-        J["CQ", "precurveTip"] = dCQ["dprecurveTip"]
+        J["CMhub", "r"][0, :] = dCQ["dr"]
+        J["CMhub", "chord"][0, :] = dCQ["dchord"]
+        J["CMhub", "theta"][0, :] = dCQ["dtheta"]
+        J["CMhub", "Rhub"][0, :] = np.squeeze(dCQ["dRhub"])
+        J["CMhub", "Rtip"][0, :] = np.squeeze(dCQ["dRtip"])
+        J["CMhub", "hub_height"][0, :] = np.squeeze(dCQ["dhubHt"])
+        J["CMhub", "precone"][0, :] = np.squeeze(dCQ["dprecone"])
+        J["CMhub", "tilt"][0, :] = np.squeeze(dCQ["dtilt"])
+        J["CMhub", "yaw"][0, :] = np.squeeze(dCQ["dyaw"])
+        J["CMhub", "shearExp"][0, :] = np.squeeze(dCQ["dshear"])
+        J["CMhub", "V_load"][0, :] = np.squeeze(dCQ["dUinf"])
+        J["CMhub", "Omega_load"][0, :] = np.squeeze(dCQ["dOmega"])
+        J["CMhub", "pitch_load"][0, :] = np.squeeze(dCQ["dpitch"])
+        J["CMhub", "precurve"][0, :] = dCQ["dprecurve"]
+        J["CMhub", "precurveTip"][0, :] = dCQ["dprecurveTip"]
+        J["CMhub", "presweep"][0, :] = dCQ["dpresweep"]
+        J["CMhub", "presweepTip"][0, :] = dCQ["dpresweepTip"]
 
-        dCM = derivs["dCM"]
-        J["CM", "r"] = dCM["dr"]
-        J["CM", "chord"] = dCM["dchord"]
-        J["CM", "theta"] = dCM["dtheta"]
-        J["CM", "Rhub"] = np.squeeze(dCM["dRhub"])
-        J["CM", "Rtip"] = np.squeeze(dCM["dRtip"])
-        J["CM", "hub_height"] = np.squeeze(dCM["dhubHt"])
-        J["CM", "precone"] = np.squeeze(dCM["dprecone"])
-        J["CM", "tilt"] = np.squeeze(dCM["dtilt"])
-        J["CM", "yaw"] = np.squeeze(dCM["dyaw"])
-        J["CM", "shearExp"] = np.squeeze(dCM["dshear"])
-        J["CM", "V_load"] = np.squeeze(dCM["dUinf"])
-        J["CM", "Omega_load"] = np.squeeze(dCM["dOmega"])
-        J["CM", "pitch_load"] = np.squeeze(dCM["dpitch"])
-        J["CM", "precurve"] = dCM["dprecurve"]
-        J["CM", "precurveTip"] = dCM["dprecurveTip"]
+        dCMy = derivs["dCMy"]
+        J["CMhub", "r"][1, :] = dCMy["dr"]
+        J["CMhub", "chord"][1, :] = dCMy["dchord"]
+        J["CMhub", "theta"][1, :] = dCMy["dtheta"]
+        J["CMhub", "Rhub"][1, :] = np.squeeze(dCMy["dRhub"])
+        J["CMhub", "Rtip"][1, :] = np.squeeze(dCMy["dRtip"])
+        J["CMhub", "hub_height"][1, :] = np.squeeze(dCMy["dhubHt"])
+        J["CMhub", "precone"][1, :] = np.squeeze(dCMy["dprecone"])
+        J["CMhub", "tilt"][1, :] = np.squeeze(dCMy["dtilt"])
+        J["CMhub", "yaw"][1, :] = np.squeeze(dCMy["dyaw"])
+        J["CMhub", "shearExp"][1, :] = np.squeeze(dCMy["dshear"])
+        J["CMhub", "V_load"][1, :] = np.squeeze(dCMy["dUinf"])
+        J["CMhub", "Omega_load"][1, :] = np.squeeze(dCMy["dOmega"])
+        J["CMhub", "pitch_load"][1, :] = np.squeeze(dCMy["dpitch"])
+        J["CMhub", "precurve"][1, :] = dCMy["dprecurve"]
+        J["CMhub", "precurveTip"][1, :] = dCMy["dprecurveTip"]
+        J["CMhub", "presweep"][1, :] = dCMy["dpresweep"]
+        J["CMhub", "presweepTip"][1, :] = dCMy["dpresweepTip"]
+
+        dCMz = derivs["dCMz"]
+        J["CMhub", "r"][2, :] = dCMz["dr"]
+        J["CMhub", "chord"][2, :] = dCMz["dchord"]
+        J["CMhub", "theta"][2, :] = dCMz["dtheta"]
+        J["CMhub", "Rhub"][2, :] = np.squeeze(dCMz["dRhub"])
+        J["CMhub", "Rtip"][2, :] = np.squeeze(dCMz["dRtip"])
+        J["CMhub", "hub_height"][2, :] = np.squeeze(dCMz["dhubHt"])
+        J["CMhub", "precone"][2, :] = np.squeeze(dCMz["dprecone"])
+        J["CMhub", "tilt"][2, :] = np.squeeze(dCMz["dtilt"])
+        J["CMhub", "yaw"][2, :] = np.squeeze(dCMz["dyaw"])
+        J["CMhub", "shearExp"][2, :] = np.squeeze(dCMz["dshear"])
+        J["CMhub", "V_load"][2, :] = np.squeeze(dCMz["dUinf"])
+        J["CMhub", "Omega_load"][2, :] = np.squeeze(dCMz["dOmega"])
+        J["CMhub", "pitch_load"][2, :] = np.squeeze(dCMz["dpitch"])
+        J["CMhub", "precurve"][2, :] = dCMz["dprecurve"]
+        J["CMhub", "precurveTip"][2, :] = dCMz["dprecurveTip"]
+        J["CMhub", "presweep"][2, :] = dCMz["dpresweep"]
+        J["CMhub", "presweepTip"][2, :] = dCMz["dpresweepTip"]
+
+        dCMb = derivs["dCMb"]
+        J["CMb", "r"] = dCMb["dr"]
+        J["CMb", "chord"] = dCMb["dchord"]
+        J["CMb", "theta"] = dCMb["dtheta"]
+        J["CMb", "Rhub"] = np.squeeze(dCMb["dRhub"])
+        J["CMb", "Rtip"] = np.squeeze(dCMb["dRtip"])
+        J["CMb", "hub_height"] = np.squeeze(dCMb["dhubHt"])
+        J["CMb", "precone"] = np.squeeze(dCMb["dprecone"])
+        J["CMb", "tilt"] = np.squeeze(dCMb["dtilt"])
+        J["CMb", "yaw"] = np.squeeze(dCMb["dyaw"])
+        J["CMb", "shearExp"] = np.squeeze(dCMb["dshear"])
+        J["CMb", "V_load"] = np.squeeze(dCMb["dUinf"])
+        J["CMb", "Omega_load"] = np.squeeze(dCMb["dOmega"])
+        J["CMb", "pitch_load"] = np.squeeze(dCMb["dpitch"])
+        J["CMb", "precurve"] = dCMb["dprecurve"]
+        J["CMb", "precurveTip"] = dCMb["dprecurveTip"]
+        J["CMb", "presweep"] = dCMb["dpresweep"]
+        J["CMb", "presweepTip"] = dCMb["dpresweepTip"]

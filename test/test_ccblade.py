@@ -12,6 +12,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 """
 
+import math
 import unittest
 from os import path
 
@@ -265,11 +266,11 @@ class TestNREL5MW(unittest.TestCase):
 
         m_rotor = 110.0  # kg
         g = 9.81
-        tilt = 5 * np.pi / 180.0
-        Tref -= m_rotor * g * np.sin(tilt)  # remove weight of rotor that is included in reported results
+        tilt = 5 * math.pi / 180.0
+        Tref -= m_rotor * g * math.sin(tilt)  # remove weight of rotor that is included in reported results
 
         outputs, derivs = self.rotor.evaluate(Uinf, Omega, pitch)
-        P, T, Q, M = [outputs[key] for key in ("P", "T", "Q", "M")]
+        P, T, Q = [outputs[key] for key in ("P", "T", "Q")]
 
         # import matplotlib.pyplot as plt
         # plt.plot(Uinf, P/1e6)
