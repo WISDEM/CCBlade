@@ -5,73 +5,85 @@ on: [push, pull_request]
 
 # A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
-    build_pip:
-        name: Pip Build (${{ matrix.os }})
-        runs-on: ${{ matrix.os }}
-        strategy:
-            fail-fast: False
-            matrix:
-                os: ["ubuntu-latest"] #, "windows-latest"]
-                python-version: [3.7, 3.8, 3.9]
-
-        steps:
-            - uses: actions/checkout@v2
-            - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v2
-              with:
-                  python-version: ${{ matrix.python-version }}
-                
-            - name: Pip Install Dependencies
-              shell: pwsh
-              run: |
-                  python -m pip install --upgrade openmdao numpy scipy pip pytest
-
-            - name: Pip Install CCBlade
-              shell: pwsh
-              run: |
-                  pip install -e .
-
-            # Run tests
-            - name: Pip Run pytest
-              shell: pwsh
-              run: |
-                  pytest test
-
-
     build_conda:
-        name: Conda Build (${{ matrix.os }})
+        name: Build (${{ matrix.os }} Python ${{ matrix.python-version }})
         runs-on: ${{ matrix.os }}
+        
+        defaults:
+            run:
+                shell: bash -l {0}
+                
         strategy:
             fail-fast: False
             matrix:
                 os: ["ubuntu-latest", "windows-latest"]
-                python-version: [3.7, 3.8, 3.9]
+                python-version: ["3.8", "3.9", "3.10"]
 
         steps:
-            - uses: actions/checkout@v2
-            - uses: conda-incubator/setup-miniconda@v2
+            - name: checkout repository
+              uses: actions/checkout@v2
+              
+            # Official way to do miniconda, but it messes with the worker environment and shell
+            - name: Install miniconda
+              uses: conda-incubator/setup-miniconda@v2
               # https://github.com/marketplace/actions/setup-miniconda
               with:
                   miniconda-version: "latest"
+                  channels: conda-forge
                   auto-update-conda: true
                   python-version: ${{ matrix.python-version }}
                   environment-file: environment.yml
+                  activate-environment: test
+                  auto-activate-base: false
+
+            # This is a less official, but more lightweight way to do miniconda
+            #- name: Install miniconda
+            #  uses: s-weigand/setup-conda@v1
+            #  # https://github.com/marketplace/actions/setup-conda
+            #  with:
+            #      update-conda: true
+            #      python-version: ${{ matrix.python-version }}
+            #      conda-channels: conda-forge
+            #      activate-conda: true
+            #      
+            #- name: Update environment
+            #  run: |
+            #      conda env update --file environment.yml
+                  
+            # Install compilers
+            - name: Add compilers
+              run: |
+                  conda install compilers
+
+            # Install dependencies of WISDEM specific to linux/mac
+            #- name: Add dependencies linux specific
+            #  if: false == contains( matrix.os, 'windows')
+            #  run: |
+            #      conda install ninja
+            #      conda init bash
 
             # Install dependencies of WISDEM specific to windows
-            - name: Add dependencies windows specific
-              if: contains( matrix.os, 'windows')
-              run: |
-                  conda install -y m2w64-toolchain libpython
-                  
+            #- name: Add dependencies windows specific
+            #  if: contains( matrix.os, 'windows')
+            #  run: |
+            #      conda install -y m2w64-toolchain libpython
+
             # Install 
             - name: Conda Install CCBlade
-              shell: pwsh
               run: |
                   python setup.py develop
 
+            # Peek
+            #- name: Library name
+            #  run: |
+            #      ls
+            #      echo "BREAK"
+            #      ls ccblade
+            #      echo "BREAK"
+            #      ls meson_build/ccblade
+
             # Run tests
             - name: Conda Run pytest
-              shell: pwsh
               run: |
                   pytest test
 

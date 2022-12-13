@@ -2,7 +2,7 @@
 
 project(
   'ccblade',
-  'c', 
+  'c',
 # unnecessary metadata commented out until Meson supports PEP517 and installation with pip
   license: 'Apache',
   meson_version: '>= 0.60',
@@ -11,7 +11,7 @@ project(
   ],
 )
 
-fortranobject_c = '../fortranobject.c'
+add_languages('fortran')
 
 cc = meson.get_compiler('c')
 
@@ -30,12 +30,10 @@ add_languages('fortran', native: false)
 # Here we differentiate from the python used by meson, py3_command, and that python target, py3_target. This is useful
 # when cross compiling like on conda-forge
 py_mod = import('python')
-py3_command = py_mod.find_installation()
-if get_option('python_target') != ''
-    py3_target = py_mod.find_installation(get_option('python_target'))
-else
-    py3_target = py3_command
-endif
-py3_dep = py3_target.dependency()
+py3 = py_mod.find_installation('python3')
+py3_dep = py3.dependency()
+
+message(py3.path())
+message(py3.get_install_dir())
 
 subdir('ccblade')
