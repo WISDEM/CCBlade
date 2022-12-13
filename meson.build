@@ -30,7 +30,7 @@ add_languages('fortran', native: false)
 # Here we differentiate from the python used by meson, py3_command, and that python target, py3_target. This is useful
 # when cross compiling like on conda-forge
 py_mod = import('python')
-py3 = py_mod.find_installation('python3')
+py3 = py_mod.find_installation('python')
 py3_dep = py3.dependency()
 
 message(py3.path())
