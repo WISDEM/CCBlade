@@ -461,13 +461,13 @@ class TestGradients(unittest.TestCase):
             dP_dchord_fd[:, i] = (Pd - self.P) / delta
 
         np.testing.assert_allclose(dT_dchord_fd, dT_dchord, rtol=5e-6, atol=1e-8)
-        np.testing.assert_allclose(dY_dchord_fd, dY_dchord, rtol=7e-5, atol=1e-8)
-        np.testing.assert_allclose(dZ_dchord_fd, dZ_dchord, rtol=7e-5, atol=1e-8)
-        np.testing.assert_allclose(dQ_dchord_fd, dQ_dchord, rtol=7e-5, atol=1e-8)
+        np.testing.assert_allclose(dY_dchord_fd, dY_dchord, rtol=9e-5, atol=1e-8)
+        np.testing.assert_allclose(dZ_dchord_fd, dZ_dchord, rtol=9e-5, atol=1e-8)
+        np.testing.assert_allclose(dQ_dchord_fd, dQ_dchord, rtol=9e-5, atol=1e-8)
         np.testing.assert_allclose(dMy_dchord_fd, dMy_dchord, rtol=4e-4, atol=1e-8)
         np.testing.assert_allclose(dMz_dchord_fd, dMz_dchord, rtol=2e-4, atol=1e-8)
-        np.testing.assert_allclose(dMb_dchord_fd, dMb_dchord, rtol=7e-5, atol=1e-8)
-        np.testing.assert_allclose(dP_dchord_fd, dP_dchord, rtol=7e-5, atol=1e-8)
+        np.testing.assert_allclose(dMb_dchord_fd, dMb_dchord, rtol=9e-5, atol=1e-8)
+        np.testing.assert_allclose(dP_dchord_fd, dP_dchord, rtol=9e-5, atol=1e-8)
 
     def test_dchord3(self):
 
