@@ -5,6 +5,8 @@ channels:
   - defaults
 
 dependencies:
+  - meson
+  - ninja
   - numpy
   - openmdao
   - pip
