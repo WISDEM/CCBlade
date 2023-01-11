@@ -5,12 +5,13 @@
 # only if building in place: ``python setup.py build_ext --inplace``
 import os
 import re
+import platform
 import shutil
 import setuptools
 import subprocess
 
 
-def run_meson_build():
+def run_meson_build(staging_dir):
     prefix = os.path.join(os.getcwd(), staging_dir)
     purelibdir = "."
 
@@ -18,6 +19,12 @@ def run_meson_build():
     meson_args = ""
     if "MESON_ARGS" in os.environ:
         meson_args = os.environ["MESON_ARGS"]
+
+    if platform.system() == "Windows":
+        if not "FC" in os.environ:
+            os.environ["FC"] = "gfortran"
+        if not "CC" in os.environ:
+            os.environ["CC"] = "gcc"
 
     # configure
     meson_path = shutil.which("meson")
@@ -27,7 +34,9 @@ def run_meson_build():
     )
     sysargs = meson_call.split(" ")
     sysargs = [arg for arg in sysargs if arg != ""]
+    print(sysargs)
     p1 = subprocess.run(sysargs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    os.makedirs(staging_dir, exist_ok=True)
     setup_log = os.path.join(staging_dir, "setup.log")
     with open(setup_log, "wb") as f:
         f.write(p1.stdout)
@@ -39,6 +48,8 @@ def run_meson_build():
     # build
     meson_call = f"{meson_path} compile -vC {staging_dir}"
     sysargs = meson_call.split(" ")
+    sysargs = [arg for arg in sysargs if arg != ""]
+    print(sysargs)
     p2 = subprocess.run(sysargs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
     compile_log = os.path.join(staging_dir, "compile.log")
     with open(compile_log, "wb") as f:
@@ -73,9 +84,9 @@ if __name__ == "__main__":
     staging_dir = "meson_build"
 
     # this keeps the meson build system from running more than once
-    if "dist" not in str(os.path.abspath(__file__)) and not os.path.isdir(staging_dir):
+    if "dist" not in str(os.path.abspath(__file__)):
         cwd = os.getcwd()
-        run_meson_build()
+        run_meson_build(staging_dir)
         os.chdir(cwd)
         copy_shared_libraries()
 
@@ -106,8 +117,9 @@ if __name__ == "__main__":
         extras_require={
             "testing": ["pytest"],
         },
-        python_requires=">=3.7",
+        python_requires=">=3.8",
         packages=["ccblade"],
+        package_data={"": ["*.yaml", "*.so", "*.lib", "*.pyd", "*.pdb", "*.dylib", "*.dll"]},
         license='Apache License, Version 2.0',
         zip_safe=False,
     )
