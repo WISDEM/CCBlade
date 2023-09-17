@@ -1,18 +1,15 @@
 Installation
 ------------
 
-.. admonition:: Prerequisites
-   :class: warning
-
-   Fortran compiler, NumPy, SciPy, zope.interface
-
-Download either CCBlade.py-|release|.tar.gz or CCBlade.py-|release|.zip and uncompress/unpack it.
-
-Install CCBlade with the following command.
+CCBlade is available as a `WISDEM <https://github.com/WISDEM/WISDEM>`_ module and WISDEM is both pip-installable and conda-installable. For building CCBlade from source as a standalone library, first make sure that you have the necessary prerequisites installed.  After cloning the repository, do:
 
 .. code-block:: bash
 
-   $ python setup.py install
+   $ pip install CCBlade
+
+The pre-requisites for running CCBlade include: `numpy`, `scipy`, `openmdao`
+
+The pre-requisites for building CCBlade from source include: `meson`, `ninja`, `gfortran`
 
 To check if installation was successful run the unit tests for the NREL 5-MW model
 
@@ -37,5 +34,5 @@ A current copy of the documentation for this code is also available online at ht
 
 .. note::
 
-    The CCBlade installation also installs the module `AirfoilPrep.py <https://github.com/NREL-WISDEM/AirfoilPreppy>`_.  Although it is not strictly necessary to use AirfoilPrep.py with CCBlade, its inclusion is convenient when working with AeroDyn input files or doing any aerodynamic preprocessing of airfoil data.  If you wish to do more with AirfoilPrep.py please see its documentation `here <http://nrel-wisdem.github.io/AirfoilPreppy>`_.
+    The CCBlade installation also installs the `AirfoilPrep` module. Although it is not strictly necessary to use AirfoilPrep.py with CCBlade, its inclusion is convenient when working with AeroDyn input files or doing any aerodynamic preprocessing of airfoil data.
 

@@ -10,13 +10,14 @@ See local documentation in the `docs`-directory or access the online version at 
 
 ## Prerequisites
 
-pyMAP requires a Fortran compiler
+CCBlade execution requires: `numpy`, `scipy`, `openmdao`
+CCBlade installation requires: `meson`, `ninja`, `gfortran`
 
 ## Installation
 
-For detailed installation instructions of WISDEM modules see <https://github.com/WISDEM/WISDEM> or to install CCBlade by itself do:
+CCBlade is available as a [WISDEM](https://github.com/WISDEM/WISDEM) module and WISDEM is both pip-installable and conda-installable. For building CCBlade from source as a standalone library, first make sure that you have the necessary prerequisites installed.  After cloning the repository, do:
 
-    $ python setup.py install
+    $ pip install CCBlade
 
 ## Run Unit Tests
 
