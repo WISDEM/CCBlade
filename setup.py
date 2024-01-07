@@ -22,13 +22,13 @@ class BinaryDistribution(Distribution):
         return True
 #######
 this_dir = os.path.abspath(os.path.dirname(__file__))
+staging_dir = os.path.join(this_dir, "meson_build")
 build_dir = os.path.join(this_dir, "build")
 
 def copy_shared_libraries():
     build_path = os.path.join(build_dir, "ccblade")
     for root, _dirs, files in os.walk(build_path):
         for file in files:
-            # move ccblade libraries to just under staging_dir
             if file.endswith((".so", ".lib", ".pyd", ".pdb", ".dylib", ".dll")):
                 if ".so.p" in root or ".pyd.p" in root:  # excludes intermediate object files
                     continue
@@ -80,22 +80,23 @@ class MesonBuildExt(build_ext):
                     os.environ["CC"] = "gcc"
 
             purelibdir = "."
-            configure_call = ["meson", "setup", build_dir, "--wipe",
+            configure_call = ["meson", "setup", staging_dir, "--wipe",
                           f"-Dpython.purelibdir={purelibdir}", f"--prefix={build_dir}", 
                           f"-Dpython.platlibdir={purelibdir}"] + meson_args.split()
             configure_call = [m for m in configure_call if m.strip() != ""]
             print(configure_call)
 
-            build_call = ["meson", "compile", "-vC", build_dir]
+            build_call = ["meson", "compile", "-vC", staging_dir]
             print(build_call)
+
+            install_call = ["meson", "install", "-C", staging_dir]
+            print(install_call)
 
             self.build_temp = build_dir
 
-            # Need fresh build directory for CMake
-            os.makedirs(self.build_temp, exist_ok=True)
-
             self.spawn(configure_call)
             self.spawn(build_call)
+            self.spawn(install_call)
             copy_shared_libraries()
 
             
