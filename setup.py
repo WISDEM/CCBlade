@@ -25,7 +25,7 @@ staging_dir = os.path.join(this_dir, "meson_build")
 build_dir = os.path.join(this_dir, "build")
 
 def copy_shared_libraries():
-    build_path = os.path.join(staging_dir, "pyframe3dd")
+    build_path = os.path.join(staging_dir, "ccblade")
     for root, _dirs, files in os.walk(build_path):
         for f in files:
             if f.endswith((".so", ".lib", ".pyd", ".pdb", ".dylib", ".dll")):
