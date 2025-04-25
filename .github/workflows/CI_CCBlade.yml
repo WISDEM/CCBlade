@@ -16,12 +16,12 @@ jobs:
             fail-fast: false #true
             matrix:
                 os: ["ubuntu-latest", "macOS-latest", "windows-latest"]
-                python-version: ["3.9", "3.10", "3.11"]
+                python-version: ["3.11", "3.12", "3.13"]
 
         steps:
             - name: Setup GNU Fortran
             #  if: false == contains( matrix.os, 'windows')
-              uses: awvwgk/setup-fortran@v1 #modflowpy/install-intelfortran-action@v1 #
+              uses: fortran-lang/setup-fortran@v1 #modflowpy/install-intelfortran-action@v1 #
               
             - name: checkout repository
               uses: actions/checkout@v4
