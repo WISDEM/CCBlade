@@ -272,30 +272,18 @@ class TestNREL5MW(unittest.TestCase):
         outputs, derivs = self.rotor.evaluate(Uinf, Omega, pitch)
         P, T, Q = [outputs[key] for key in ("P", "T", "Q")]
 
-        # import matplotlib.pyplot as plt
-        # plt.plot(Uinf, P/1e6)
-        # plt.plot(Uinf, Pref/1e3)
-        # plt.figure()
-        # plt.plot(Uinf, T/1e6)
-        # plt.plot(Uinf, Tref/1e3)
-        # plt.show()
+        #import matplotlib.pyplot as plt
+        #plt.plot(Uinf, P/1e6, 'b-')
+        #plt.plot(Uinf, Pref/1e3, 'b--')
+        #plt.figure()
+        #plt.plot(Uinf, T/1e6, 'g')
+        #plt.plot(Uinf, Tref/1e3, 'g--')
+        #plt.show()
 
         idx = Uinf < 15
         np.testing.assert_allclose(Q[idx] / 1e6, Qref[idx] / 1e3, atol=0.15)
         np.testing.assert_allclose(P[idx] / 1e6, Pref[idx] / 1e3, atol=0.2)  # within 0.2 of 1MW
         np.testing.assert_allclose(T[idx] / 1e6, Tref[idx] / 1e3, atol=0.15)
 
-
-def suite():
-    suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(TestNREL5MW))
-    return suite
-
-
 if __name__ == "__main__":
-    result = unittest.TextTestRunner().run(suite())
-
-    if result.wasSuccessful():
-        exit(0)
-    else:
-        exit(1)
+    unittest.main()
