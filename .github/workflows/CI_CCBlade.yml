@@ -15,7 +15,7 @@ jobs:
         strategy:
             fail-fast: false #true
             matrix:
-                os: ["ubuntu-latest", "macOS-latest", "windows-latest"]
+                os: ["ubuntu-latest", "macOS-14", "windows-latest"]
                 python-version: ["3.11", "3.12", "3.13"]
 
         steps:
@@ -27,7 +27,7 @@ jobs:
               uses: actions/checkout@v4
 
             - name: Set up Python ${{ matrix.python-version }}
-              uses: actions/setup-python@v4
+              uses: actions/setup-python@v5
               id: cp
               with:
                   python-version: ${{ matrix.python-version }}
@@ -59,14 +59,14 @@ jobs:
         strategy:
             fail-fast: false #true
             matrix:
-                os: ["ubuntu-latest", "macOS-latest", "windows-latest"]
+                os: ["ubuntu-latest", "macOS-14", "windows-latest"]
                 python-version: ["3.11", "3.12", "3.13"]
 
         steps:
             - name: checkout repository
               uses: actions/checkout@v4
 
-            - uses: conda-incubator/setup-miniconda@v2
+            - uses: conda-incubator/setup-miniconda@v3
               # https://github.com/marketplace/actions/setup-miniconda
               with:
                   #mamba-version: "*"
@@ -83,15 +83,16 @@ jobs:
                   conda install -y m2w64-toolchain libpython
                   
             - name: Add dependencies mac specific
-              if: contains( matrix.os, 'mac')
+              if: false == contains( matrix.os, 'windows')
               run: |
-                  conda install -y compilers
+                  conda install -y gfortran
                   gfortran --version
 
             # Install 
             - name: Debug
               run: |
                   conda list
+                  which -a gfortran
                   printenv
 
             #- name: Setup tmate session
@@ -105,7 +106,7 @@ jobs:
               env:
                   MESON_ARGS: ""
               run: |
-                  python setup.py develop
+                  pip install --no-build-isolation --no-deps -e . -v
 
             - name: Test run
               run: |
